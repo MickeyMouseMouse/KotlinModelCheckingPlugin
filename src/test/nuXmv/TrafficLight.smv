@@ -1,0 +1,38 @@
+MODULE main
+VAR
+    mode: 0..4;
+    red: boolean;
+    yellow: boolean;
+    green: boolean;
+ASSIGN
+    init(mode) := 0;
+    init(red) := FALSE;
+    init(yellow) := FALSE;
+    init(green) := FALSE;
+
+    next(mode) := case
+        mode = 0 : {0, 1};
+        mode = 1 : {0, 2};
+        mode = 2 : {0, 3};
+        mode = 3 : {0, 4};
+        mode = 4 : {0, 1};
+        TRUE : mode;
+    esac;
+
+    next(red) := case
+        mode = 1 | mode = 2 : TRUE;
+        TRUE : FALSE;
+    esac;
+
+    next(yellow) := case
+        mode = 2 | mode = 4 : TRUE;
+        TRUE : FALSE;
+    esac;
+
+    next(green) := case
+        mode = 3 : TRUE;
+        TRUE : FALSE;
+    esac;
+
+LTLSPEC
+G (!(red = TRUE & yellow = TRUE & green = TRUE))
