@@ -1,11 +1,9 @@
-import org.example.kotlinmodelcheckingplugin.verification.annotation_dataclasses.CTLFormula
-import org.example.kotlinmodelcheckingplugin.verification.annotation_dataclasses.LTLFormula
-import org.example.kotlinmodelcheckingplugin.verification.annotation_dataclasses.StateVarInfo
+import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
 
 class NuXmvModelBuilder(
-    private val stateVars: List<StateVarInfo>,
-    private val ltlFormulas: List<LTLFormula>,
-    private val ctlFormulas: List<CTLFormula>
+    private val vars: List<VarInfo>,
+    private val ltlFormulas: List<String>,
+    private val ctlFormulas: List<String>
 ) {
     private val tab = "    " // 4 spaces
 
@@ -17,9 +15,9 @@ class NuXmvModelBuilder(
 
         // VAR block
         model.append("VAR\n")
-        for (stateVar in stateVars) {
-            model.append("${tab}${stateVar.name}:")
-            when (stateVar.type) {
+        for (variable in vars) {
+            model.append("${tab}${variable.name}:")
+            when (variable.type) {
                 "int" -> {
 
                 }
@@ -33,8 +31,8 @@ class NuXmvModelBuilder(
         // ASSIGN block
         model.append("ASSIGN\n")
         // initial values
-        for (stateVar in stateVars) {
-            model.append("${tab}init(${stateVar.name}) := ${stateVar.initValue};\n")
+        for (variable in vars) {
+            model.append("${tab}init(${variable.name}) := ${variable.initValue};\n")
         }
         model.append("\n")
 
@@ -43,8 +41,8 @@ class NuXmvModelBuilder(
         model.append("\n")
 
         // specs
-        ltlFormulas.forEach{ model.append("LTLSPEC\n${it.formula}\n\n") }
-        ctlFormulas.forEach{ model.append("CTLSPEC\n${it.formula}\n\n") }
+        ltlFormulas.forEach{ model.append("LTLSPEC\n${it}\n\n") }
+        ctlFormulas.forEach{ model.append("CTLSPEC\n${it}\n\n") }
 
         return model.toString()
     }

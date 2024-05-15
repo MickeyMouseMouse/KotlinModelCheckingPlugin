@@ -1,22 +1,31 @@
 import org.example.kotlinmodelcheckingplugin.annotations.StateVar
 import org.example.kotlinmodelcheckingplugin.annotations.LTL
+import org.example.kotlinmodelcheckingplugin.annotations.CTL
+
 
 @LTL("G (!(red = TRUE & yellow = TRUE & green = TRUE))")
+@CTL("G mode < 5")
 class TrafficLight {
     @StateVar
-    private var mode: Int = 0 // 0 = off; 1 = stop; 2 = get ready to start; 3 = start; 4 = get ready to stop
+    private var mode: Int // 0 = off; 1 = stop; 2 = get ready to start; 3 = start; 4 = get ready to stop
 
-    @StateVar
-    private var red: Boolean = false
+    private var red: Boolean
 
-    @StateVar
     private var yellow: Boolean = false
 
-    @StateVar
     private var green: Boolean = false
 
     init {
-
+        mode = 0
+        red = false
+    }
+    
+    fun main() {
+        enable()
+        for (i in 1..5) {
+            switch()
+        }
+        disable()
     }
 
     fun enable() {
@@ -39,7 +48,7 @@ class TrafficLight {
         update()
     }
 
-    fun update() {
+    private fun update() {
         when (mode) {
             0 -> { // off
                 red = false

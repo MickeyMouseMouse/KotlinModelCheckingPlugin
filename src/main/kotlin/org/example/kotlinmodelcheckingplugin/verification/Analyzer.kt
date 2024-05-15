@@ -1,7 +1,7 @@
 package org.example.kotlinmodelcheckingplugin.verification
 
 import NuXmvModelBuilder
-import org.example.kotlinmodelcheckingplugin.verification.annotation_dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
 import sootup.core.jimple.common.stmt.JAssignStmt
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
@@ -11,11 +11,12 @@ import java.io.IOException
 import java.io.InputStreamReader
 
 class Analyzer(
-    private val className: String?,
-    private val sourceCode: String,
-    private val stateVars: List<StateVarInfo>,
-    private val ltlFormulas: List<LTLFormula>,
-    private val ctlFormulas: List<CTLFormula>
+    private var sourceCode: String,
+    private var className: String,
+    private var entryPoint: String,
+    private var vars: MutableList<VarInfo>,
+    private var ltlFormulas: List<String>,
+    private var ctlFormulas: List<String>
 ) {
     /**
      * Execute the command in the OS command shell
@@ -30,7 +31,7 @@ class Analyzer(
     /**
      * Check for dependencies in the system: Kotlin compiler, nuXmv model checker
      */
-    fun checkDependencies(): Pair<Boolean,String> {
+    fun checkDependencies(): String {
         val errors = mutableListOf<String>()
         try {
             runCommand(arrayOf("kotlinc.bat", "-version"))
@@ -44,13 +45,13 @@ class Analyzer(
         }
 
         if (errors.isEmpty()) {
-            return Pair(true, "")
+            return ""
         } else {
             val msg = StringBuilder("ERROR: ")
             errors.forEach{
                 msg.append(it).append("; ")
             }
-            return Pair(false, msg.toString())
+            return msg.toString()
         }
     }
 
@@ -111,42 +112,40 @@ class Analyzer(
         val classType = view.identifierFactory.getClassType(className)
         val sootClass = view.getClass(classType).get()
 
-        for (method in sootClass.methods) {
-            if (method.name == "<init>") { // constructor
-                for (stmt in method.body.stmts) {
-                    if (stmt is JAssignStmt) { // get the initial values of state variables
-                        try {
-                            val varName = stmt.fieldRef.fieldSignature.name  // can throw RuntimeException
-                            for (stateVar in stateVars) {
-                                if (stateVar.name == varName) {
-                                    stateVar.initValue = stmt.uses[1].toString()
-                                }
-                            }
-                        } catch (_: RuntimeException) {}
+        val constructor = view.getMethod(
+            view.identifierFactory.getMethodSignature(
+                classType, "<init>", "void", listOf()
+            )
+        ).get()
+        for (stmt in constructor.body.stmts) {
+            if (stmt is JAssignStmt) { // get the initial values of variables
+                try {
+                    val varName = stmt.fieldRef.fieldSignature.name // can throw RuntimeException
+                    for (variable in vars) {
+                        if (variable.name == varName) {
+                            variable.initValue = stmt.uses[1].toString()
+                            break
+                        }
                     }
-                }
+                } catch (_: RuntimeException) {}
             }
-
-            // TODO
         }
 
-        print("")
-        /*
-        val methodSignature = view.identifierFactory.getMethodSignature(
-            classType,
-            "<init>", // main
-            "void", // void
-            listOf() // listOf("java.lang.String[]")) listOf()
-        )
-        val opt = view.getMethod(methodSignature)
-        val method = opt.get()
+        val entryPointMethod = view.getMethod(
+            view.identifierFactory.getMethodSignature(
+                classType, "main", "void", listOf()
+            )
+        ).get()
+        for (stmt in constructor.body.stmts) {
+            
+        }
 
-        val stmtGraph = method.body.stmts
-         */
+
+        print("")
     }
 
     /**
-     * Perform model checking
+     *
      */
     fun start(): String {
         val (result: Pair<Int, String>, jarFile: File?) = compileSourceCode()
@@ -157,7 +156,7 @@ class Analyzer(
         analyse(jarFile)
 
         return NuXmvModelBuilder(
-            stateVars, ltlFormulas, ctlFormulas
+            vars, ltlFormulas, ctlFormulas
         ).getModel()
 
         //return runModelChecker(model)
