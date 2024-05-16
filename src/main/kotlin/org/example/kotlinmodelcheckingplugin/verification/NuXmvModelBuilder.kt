@@ -1,42 +1,56 @@
 import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.graph.StateMachine
 
 class NuXmvModelBuilder(
+    private val moduleName: String,
     private val vars: List<VarInfo>,
+    private val stateMachines: Map<String, StateMachine>,
     private val ltlFormulas: List<String>,
     private val ctlFormulas: List<String>
 ) {
     private val tab = "    " // 4 spaces
 
+    private fun getBoolean(value: String): String {
+        return if (arrayOf("true", "1").contains(value.lowercase())) "TRUE" else "FALSE"
+    }
+
     /**
      *
      */
     fun getModel(): String {
-        val model = StringBuilder("MODULE main\n")
+        val model = StringBuilder("MODULE ${moduleName}\n")
 
         // VAR block
         model.append("VAR\n")
         for (variable in vars) {
-            model.append("${tab}${variable.name}:")
+            model.append("${tab}${variable.name}: ")
             when (variable.type) {
                 "int" -> {
-
+                    // ???
                 }
                 "boolean" -> {
-
+                    model.append("boolean;\n")
                 }
             }
-            model.append(";\n")
         }
 
         // ASSIGN block
         model.append("ASSIGN\n")
         // initial values
         for (variable in vars) {
-            model.append("${tab}init(${variable.name}) := ${variable.initValue};\n")
+            model.append("${tab}init(${variable.name}) := ")
+            when (variable.type) {
+                "int" -> {
+                    model.append("${variable.initValue};\n")
+                }
+                "boolean" -> {
+                    model.append("${getBoolean(variable.initValue)};\n")
+                }
+            }
         }
         model.append("\n")
 
-
+        model.append("TODO\n")
 
         model.append("\n")
 

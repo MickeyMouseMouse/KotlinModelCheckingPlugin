@@ -2,8 +2,12 @@ package org.example.kotlinmodelcheckingplugin.verification
 
 import NuXmvModelBuilder
 import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
 import sootup.core.jimple.common.stmt.JAssignStmt
+import sootup.core.jimple.common.stmt.JInvokeStmt
+import sootup.core.signatures.MethodSignature
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
+import sootup.java.core.JavaSootMethod
 import sootup.java.core.views.JavaView
 import java.io.BufferedReader
 import java.io.File
@@ -106,12 +110,13 @@ class Analyzer(
     /**
      *
      */
-    private fun analyse(jarFile: File) {
+    private fun buildStateMachines(jarFile: File): Map<String, StateMachine> {
         val inputLocation = JavaClassPathAnalysisInputLocation(jarFile.absolutePath)
         val view = JavaView(inputLocation)
         val classType = view.identifierFactory.getClassType(className)
         val sootClass = view.getClass(classType).get()
 
+        //
         val constructor = view.getMethod(
             view.identifierFactory.getMethodSignature(
                 classType, "<init>", "void", listOf()
@@ -131,17 +136,26 @@ class Analyzer(
             }
         }
 
-        val entryPointMethod = view.getMethod(
-            view.identifierFactory.getMethodSignature(
-                classType, "main", "void", listOf()
-            )
-        ).get()
-        for (stmt in constructor.body.stmts) {
-            
+        //
+        val stateMachines = mutableMapOf<String, StateMachine>()
+        for (variable in vars) {
+            stateMachines[variable.name] = StateMachine(variable.initValue)
         }
 
+        //
+        fun analyse(methodSignature: MethodSignature) {
+            val method = view.getMethod(methodSignature).get()
+            for (stmt in method.body.stmts) {
+                if (stmt is JInvokeStmt) {
+                    analyse(stmt.invokeExpr.methodSignature)
+                }
+            }
+        }
 
-        print("")
+        // start the analysis with the 'main()' function (entry point)
+        analyse(view.identifierFactory.getMethodSignature(classType, "main", "void", listOf()))
+
+        return stateMachines
     }
 
     /**
@@ -153,14 +167,12 @@ class Analyzer(
             return "Compilation failed: " + result.second
         }
 
-        analyse(jarFile)
+        val stateMachines = buildStateMachines(jarFile)
 
         return NuXmvModelBuilder(
-            vars, ltlFormulas, ctlFormulas
+            className, vars, stateMachines, ltlFormulas, ctlFormulas
         ).getModel()
 
         //return runModelChecker(model)
-
-        //return "mock"
     }
 }

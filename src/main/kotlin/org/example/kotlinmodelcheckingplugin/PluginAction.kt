@@ -71,28 +71,25 @@ class PluginAction: DumbAwareAction() {
         // retrieve variables
         val vars = mutableListOf<VarInfo>()
         for (property in ktClass.getProperties()) {
+            val propertyName = property.nameAsSafeName.asString()
+
+            val returnTypeReference = property.getReturnTypeReference()
+            val propertyType = (returnTypeReference?.getTypeText() ?: "unknown").lowercase()
+
+            val initializer = property.initializer
+            val initValue = if (initializer == null) "null" else initializer.text
+
             var isStateVar = false
+
             for (annotation in property.annotationEntries) {
                 if (annotation.shortName?.asString() == "StateVar") {
                     isStateVar = true
-                    vars.add(
-                        VarInfo(
-                            property.nameAsSafeName.asString(),
-                            property.getReturnTypeReference()?.getTypeText(),
-                            property.initializer?.text,
-                            true
-                        )
-                    )
+                    vars.add(VarInfo(propertyName, propertyType, initValue, true))
+                    break
                 }
             }
-            if (!isStateVar) {
-                vars.add(VarInfo(
-                    property.nameAsSafeName.asString(),
-                    property.getReturnTypeReference()?.getTypeText(),
-                    property.initializer?.text,
-                    false
-                ))
-            }
+
+            if (!isStateVar) vars.add(VarInfo(propertyName, propertyType, initValue, false))
         }
 
         // retrieve LTL and CTL formulas
