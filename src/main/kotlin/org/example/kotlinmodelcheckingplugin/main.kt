@@ -1,7 +1,7 @@
 package org.example.kotlinmodelcheckingplugin
 
 import org.example.kotlinmodelcheckingplugin.verification.Analyzer
-import org.example.kotlinmodelcheckingplugin.verification.annotation_dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import java.io.File
 
 // for debug
@@ -10,19 +10,21 @@ fun main() {
         .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(StateVar|LTL|CTL)".toRegex(), "")
         .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
 
-//    val analyzer = Analyzer(false)
-//        "TrafficLight",
-//        sourceCode,
-//        listOf(
-//            StateVarInfo("mode", "int", "0"),
-//            StateVarInfo("red", "Boolean", "false"),
-//            StateVarInfo("yellow", "Boolean", "false"),
-//            StateVarInfo("green", "Boolean", "false"),
-//        ),
-//        listOf(
-//            LTLFormula("G (!(red = TRUE & yellow = TRUE & green = TRUE))")
-//        ),
-//        listOf()
-//    )
-//    print(analyzer.start())
+    val analyzer = Analyzer(
+        sourceCode,
+        "TrafficLight",
+        mutableListOf(
+            Variable("mode", VariableType.INT, VariableValue(intValue=0), true),
+            Variable("red", VariableType.BOOL, VariableValue(boolValue=false), false),
+            Variable("green", VariableType.BOOL, VariableValue(boolValue=false), false),
+            Variable("yellow", VariableType.BOOL, VariableValue(boolValue=false), false)
+        ),
+        listOf(
+            "G (!(red = TRUE & yellow = TRUE & green = TRUE))"
+        ),
+        listOf(
+
+        )
+    )
+    print(analyzer.start())
 }

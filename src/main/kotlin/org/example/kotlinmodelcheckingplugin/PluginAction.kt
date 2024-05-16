@@ -4,7 +4,6 @@ import org.example.kotlinmodelcheckingplugin.verification.Analyzer
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys.PSI_ELEMENT
 import com.intellij.openapi.actionSystem.PlatformDataKeys
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.DialogPanel
@@ -13,7 +12,7 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.rows
-import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.callableBuilder.getReturnTypeReference
 import org.jetbrains.kotlin.psi.KtClass
@@ -51,7 +50,7 @@ class PluginAction: DumbAwareAction() {
     private lateinit var analyzer: Analyzer
 
     override fun actionPerformed(e: AnActionEvent) { // popup menu event
-        val project = e.project ?: return
+        e.project ?: return
 
         val selectedFile = e.getData(PlatformDataKeys.VIRTUAL_FILE) ?: return
         if (selectedFile.isDirectory || !selectedFile.name.matches(Regex("(.)+(.kt)$"))) {
@@ -69,27 +68,37 @@ class PluginAction: DumbAwareAction() {
         val ktClass = e.getData(PSI_ELEMENT) as KtClass
 
         // retrieve variables
-        val vars = mutableListOf<VarInfo>()
+        val vars = mutableListOf<Variable>()
         for (property in ktClass.getProperties()) {
-            val propertyName = property.nameAsSafeName.asString()
-
             val returnTypeReference = property.getReturnTypeReference()
             val propertyType = (returnTypeReference?.getTypeText() ?: "unknown").lowercase()
 
-            val initializer = property.initializer
-            val initValue = if (initializer == null) "null" else initializer.text
+            val initValueString = property.initializer?.text
 
-            var isStateVar = false
+            lateinit var newVar: Variable
+            when (propertyType) {
+                "int" -> newVar = Variable(
+                    property.nameAsSafeName.asString(),
+                    VariableType.INT,
+                    VariableValue(intValue = initValueString?.toInt()),
+                    false
+                )
+                "boolean" -> newVar = Variable(
+                    property.nameAsSafeName.asString(),
+                    VariableType.BOOL,
+                    VariableValue(boolValue = initValueString?.toBoolean()),
+                    false
+                )
+            }
 
             for (annotation in property.annotationEntries) {
                 if (annotation.shortName?.asString() == "StateVar") {
-                    isStateVar = true
-                    vars.add(VarInfo(propertyName, propertyType, initValue, true))
+                    newVar.isState = true
                     break
                 }
             }
 
-            if (!isStateVar) vars.add(VarInfo(propertyName, propertyType, initValue, false))
+            vars.add(newVar)
         }
 
         // retrieve LTL and CTL formulas
@@ -129,7 +138,6 @@ class PluginAction: DumbAwareAction() {
         analyzer = Analyzer(
             sourceCode,
             ktClass.name.toString(),
-            "main",
             vars,
             ltlFormulas,
             ctlFormulas

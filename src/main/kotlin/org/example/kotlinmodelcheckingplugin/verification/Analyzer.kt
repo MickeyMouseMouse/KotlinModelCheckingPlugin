@@ -1,13 +1,12 @@
 package org.example.kotlinmodelcheckingplugin.verification
 
 import NuXmvModelBuilder
-import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
 import sootup.core.jimple.common.stmt.JAssignStmt
 import sootup.core.jimple.common.stmt.JInvokeStmt
 import sootup.core.signatures.MethodSignature
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
-import sootup.java.core.JavaSootMethod
 import sootup.java.core.views.JavaView
 import java.io.BufferedReader
 import java.io.File
@@ -17,8 +16,7 @@ import java.io.InputStreamReader
 class Analyzer(
     private var sourceCode: String,
     private var className: String,
-    private var entryPoint: String,
-    private var vars: MutableList<VarInfo>,
+    private var vars: MutableList<Variable>,
     private var ltlFormulas: List<String>,
     private var ctlFormulas: List<String>
 ) {
@@ -116,23 +114,30 @@ class Analyzer(
         val classType = view.identifierFactory.getClassType(className)
         val sootClass = view.getClass(classType).get()
 
-        //
-        val constructor = view.getMethod(
-            view.identifierFactory.getMethodSignature(
-                classType, "<init>", "void", listOf()
-            )
-        ).get()
-        for (stmt in constructor.body.stmts) {
-            if (stmt is JAssignStmt) { // get the initial values of variables
-                try {
-                    val varName = stmt.fieldRef.fieldSignature.name // can throw RuntimeException
-                    for (variable in vars) {
-                        if (variable.name == varName) {
-                            variable.initValue = stmt.uses[1].toString()
-                            break
+        // get the initial values of variables from constructor
+        for (method in sootClass.methods) {
+            if (method.name == "<init>") {
+                for (stmt in method.body.stmts) {
+                    if (stmt is JAssignStmt) {
+                        try {
+                            val varName = stmt.fieldRef.fieldSignature.name // can throw RuntimeException
+                            for (variable in vars) {
+                                if (variable.name == varName) {
+                                    when (variable.type) {
+                                        VariableType.INT -> {
+                                            variable.initValue.intValue = stmt.uses[1].toString().toInt()
+                                        }
+                                        VariableType.BOOL -> {
+                                            variable.initValue.boolValue = stmt.uses[1].toString().toBoolean()
+                                        }
+                                    }
+                                    break
+                                }
+                            }
+                        } catch (_: RuntimeException) {
                         }
                     }
-                } catch (_: RuntimeException) {}
+                }
             }
         }
 
@@ -146,6 +151,7 @@ class Analyzer(
         fun analyse(methodSignature: MethodSignature) {
             val method = view.getMethod(methodSignature).get()
             for (stmt in method.body.stmts) {
+
                 if (stmt is JInvokeStmt) {
                     analyse(stmt.invokeExpr.methodSignature)
                 }
@@ -174,5 +180,7 @@ class Analyzer(
         ).getModel()
 
         //return runModelChecker(model)
+
+        //return "mock"
     }
 }

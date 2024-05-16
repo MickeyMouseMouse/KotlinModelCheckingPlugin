@@ -1,17 +1,14 @@
-import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
+import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
+import org.example.kotlinmodelcheckingplugin.verification.variable.Variable
 
 class NuXmvModelBuilder(
-    private val vars: List<VarInfo>,
+    private val vars: List<Variable>,
     private val stateMachines: Map<String, StateMachine>,
     private val ltlFormulas: List<String>,
     private val ctlFormulas: List<String>
 ) {
     private val tab = "    " // 4 spaces
-
-    private fun getBoolean(value: String): String {
-        return if (arrayOf("true", "1").contains(value.lowercase())) "TRUE" else "FALSE"
-    }
 
     /**
      *
@@ -24,10 +21,10 @@ class NuXmvModelBuilder(
         for (variable in vars) {
             model.append("${tab}${variable.name}: ")
             when (variable.type) {
-                "int" -> {
+                VariableType.INT -> {
                     // ???
                 }
-                "boolean" -> {
+                VariableType.BOOL -> {
                     model.append("boolean;\n")
                 }
             }
@@ -39,11 +36,11 @@ class NuXmvModelBuilder(
         for (variable in vars) {
             model.append("${tab}init(${variable.name}) := ")
             when (variable.type) {
-                "int" -> {
-                    model.append("${variable.initValue};\n")
+                VariableType.INT -> {
+                    model.append("${variable.initValue.intValue};\n")
                 }
-                "boolean" -> {
-                    model.append("${getBoolean(variable.initValue)};\n")
+                VariableType.BOOL -> {
+                    model.append("${variable.initValue.boolValue.toString()};\n")
                 }
             }
         }

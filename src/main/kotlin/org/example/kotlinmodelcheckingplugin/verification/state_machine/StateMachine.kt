@@ -1,7 +1,9 @@
 package org.example.kotlinmodelcheckingplugin.verification.state_machine
 
-class StateMachine(initValue: String) {
-    val vertices = mutableListOf<String>()
+import org.example.kotlinmodelcheckingplugin.verification.variable.VariableValue
+
+class StateMachine(initValue: VariableValue) {
+    val vertices = mutableListOf<VariableValue>()
     val edges = mutableListOf<Edge>()
     private var headIndex: Int
 
@@ -10,7 +12,7 @@ class StateMachine(initValue: String) {
         headIndex = 0
     }
 
-    fun add(value: String, conditions: List<Pair<String, String>> = listOf()) {
+    fun add(value: VariableValue, conditions: List<Pair<String, String>> = listOf()) {
         var exists = false
         for (i in 0..< vertices.size) {
             if (vertices[i] == value) {
