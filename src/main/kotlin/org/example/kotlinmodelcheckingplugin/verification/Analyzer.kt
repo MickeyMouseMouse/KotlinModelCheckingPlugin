@@ -170,7 +170,7 @@ class Analyzer(
         val stateMachines = buildStateMachines(jarFile)
 
         return NuXmvModelBuilder(
-            className, vars, stateMachines, ltlFormulas, ctlFormulas
+            vars, stateMachines, ltlFormulas, ctlFormulas
         ).getModel()
 
         //return runModelChecker(model)

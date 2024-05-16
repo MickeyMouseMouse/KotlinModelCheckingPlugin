@@ -1,8 +1,7 @@
 import org.example.kotlinmodelcheckingplugin.verification.dataclasses.*
-import org.example.kotlinmodelcheckingplugin.verification.graph.StateMachine
+import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
 
 class NuXmvModelBuilder(
-    private val moduleName: String,
     private val vars: List<VarInfo>,
     private val stateMachines: Map<String, StateMachine>,
     private val ltlFormulas: List<String>,
@@ -18,7 +17,7 @@ class NuXmvModelBuilder(
      *
      */
     fun getModel(): String {
-        val model = StringBuilder("MODULE ${moduleName}\n")
+        val model = StringBuilder("MODULE main\n")
 
         // VAR block
         model.append("VAR\n")
