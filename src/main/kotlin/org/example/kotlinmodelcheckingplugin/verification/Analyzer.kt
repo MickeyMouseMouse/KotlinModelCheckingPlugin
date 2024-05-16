@@ -1,11 +1,16 @@
 package org.example.kotlinmodelcheckingplugin.verification
 
 import NuXmvModelBuilder
+import com.jetbrains.rd.generator.nova.PredefinedType
 import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
+import sootup.core.jimple.common.ref.JInstanceFieldRef
 import sootup.core.jimple.common.stmt.JAssignStmt
+import sootup.core.jimple.common.stmt.JGotoStmt
+import sootup.core.jimple.common.stmt.JIfStmt
 import sootup.core.jimple.common.stmt.JInvokeStmt
 import sootup.core.signatures.MethodSignature
+import sootup.core.types.PrimitiveType
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
 import java.io.BufferedReader
@@ -151,9 +156,33 @@ class Analyzer(
         fun analyse(methodSignature: MethodSignature) {
             val method = view.getMethod(methodSignature).get()
             for (stmt in method.body.stmts) {
+                when (stmt) {
+                    is JAssignStmt -> {
+                        if (stmt.leftOp is JInstanceFieldRef) {
+                            val varSignature = (stmt.leftOp as JInstanceFieldRef).fieldSignature
+                            when (varSignature.type) {
+                                PrimitiveType.getInt()-> {
+                                    stateMachines[varSignature.name]?.add(
+                                        VariableValue(intValue = stmt.rightOp.toString().toInt())
+                                    )
+                                }
+                                PrimitiveType.getBoolean()-> {
+                                    stateMachines[varSignature.name]?.add(
+                                        VariableValue(boolValue = stmt.rightOp.toString().toBoolean())
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    is JIfStmt -> {
 
-                if (stmt is JInvokeStmt) {
-                    analyse(stmt.invokeExpr.methodSignature)
+                    }
+                    is JGotoStmt -> {
+
+                    }
+                    is JInvokeStmt -> {
+                        analyse(stmt.invokeExpr.methodSignature)
+                    }
                 }
             }
         }
