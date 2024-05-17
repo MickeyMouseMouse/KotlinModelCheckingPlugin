@@ -1,5 +1,5 @@
 package org.example.kotlinmodelcheckingplugin.verification.variable
 
 enum class VariableType {
-    UNKNOWN, INT, BOOL
+    UNKNOWN, INT, DOUBLE, BOOL
 }

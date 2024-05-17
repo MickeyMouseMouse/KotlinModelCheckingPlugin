@@ -21,12 +21,11 @@ class TrafficLight {
     }
     
     fun main() {
-        //enable()
-        for (i in 1..5) {
+        enable()
+        for (i in 1..4) {
             switch()
-            //if (i % 2 == 0) { switch() }
         }
-        //disable()
+        disable()
     }
 
     fun enable() {
@@ -46,7 +45,7 @@ class TrafficLight {
             3 -> mode = 4
             4 -> mode = 1
         }
-        //update()
+        update()
     }
 
     private fun update() {

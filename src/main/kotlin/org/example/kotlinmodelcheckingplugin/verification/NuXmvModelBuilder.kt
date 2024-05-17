@@ -10,51 +10,80 @@ class NuXmvModelBuilder(
 ) {
     private val tab = "    " // 4 spaces
 
+    private fun getVarBlock(): StringBuilder {
+        val result = StringBuilder()
+        for (variable in vars) {
+            result.append("${tab}${variable.name}: ")
+            when (variable.type) {
+                VariableType.INT -> {
+                    val vertices = stateMachines[variable.name]?.vertices
+                    if (vertices != null) {
+                        var min = Int.MAX_VALUE
+                        var max = Int.MIN_VALUE
+                        for (vertex in vertices) {
+                            if (vertex.intValue!! < min) min = vertex.intValue!!
+                            if (vertex.intValue!! > max) max = vertex.intValue!!
+                        }
+                        result.append("${min}..${max};\n")
+                    }
+                }
+                VariableType.DOUBLE -> {
+                    // TODO
+                }
+                VariableType.BOOL -> {
+                    result.append("boolean;\n")
+                }
+                VariableType.UNKNOWN -> {}
+            }
+        }
+        return result
+    }
+
+    private fun getInitBlock(): StringBuilder {
+        val result = StringBuilder()
+        for (variable in vars) {
+            result.append("${tab}init(${variable.name}) := ")
+            when (variable.type) {
+                VariableType.INT -> {
+                    result.append("${variable.initValue.intValue};\n")
+                }
+                VariableType.DOUBLE -> {
+                    result.append("${variable.initValue.doubleValue};\n")
+                }
+                VariableType.BOOL -> {
+                    result.append("${variable.initValue.boolValue.toString().uppercase()};\n")
+                }
+                VariableType.UNKNOWN -> {}
+            }
+        }
+        return result
+    }
+
+    private fun getStateMachineBlock(): StringBuilder {
+        val result = StringBuilder()
+        for (stateMachine in stateMachines) {
+
+        }
+        return result
+    }
+
+    private fun getSpecsBlock(): StringBuilder {
+        val result = StringBuilder()
+        ltlFormulas.forEach{ result.append("LTLSPEC\n${it}\n\n") }
+        ctlFormulas.forEach{ result.append("CTLSPEC\n${it}\n\n") }
+        return result
+    }
+
+
     /**
      *
      */
     fun getModel(): String {
-        val model = StringBuilder("MODULE main\n")
-
-        // VAR block
-        model.append("VAR\n")
-        for (variable in vars) {
-            model.append("${tab}${variable.name}: ")
-            when (variable.type) {
-                VariableType.INT -> {
-                    // ???
-                }
-                VariableType.BOOL -> {
-                    model.append("boolean;\n")
-                }
-                VariableType.UNKNOWN -> {}
-            }
-        }
-
-        // ASSIGN block
-        model.append("ASSIGN\n")
-        // initial values
-        for (variable in vars) {
-            model.append("${tab}init(${variable.name}) := ")
-            when (variable.type) {
-                VariableType.INT -> {
-                    model.append("${variable.initValue.intValue};\n")
-                }
-                VariableType.BOOL -> {
-                    model.append("${variable.initValue.boolValue.toString()};\n")
-                }
-                VariableType.UNKNOWN -> {}
-            }
-        }
-        model.append("\n")
-
-        model.append("TODO\n")
-
-        model.append("\n")
-
-        // specs
-        ltlFormulas.forEach{ model.append("LTLSPEC\n${it}\n\n") }
-        ctlFormulas.forEach{ model.append("CTLSPEC\n${it}\n\n") }
+        val model = StringBuilder()
+        model.append("MODULE main\n")
+            .append("VAR\n").append(getVarBlock())
+            .append("ASSIGN\n").append(getInitBlock()).append("\n").append(getStateMachineBlock()).append("\n")
+            .append(getSpecsBlock())
 
         return model.toString()
     }
