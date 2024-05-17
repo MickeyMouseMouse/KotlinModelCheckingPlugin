@@ -27,6 +27,7 @@ class NuXmvModelBuilder(
                 VariableType.BOOL -> {
                     model.append("boolean;\n")
                 }
+                VariableType.UNKNOWN -> {}
             }
         }
 
@@ -42,6 +43,7 @@ class NuXmvModelBuilder(
                 VariableType.BOOL -> {
                     model.append("${variable.initValue.boolValue.toString()};\n")
                 }
+                VariableType.UNKNOWN -> {}
             }
         }
         model.append("\n")

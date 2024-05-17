@@ -4,14 +4,20 @@ import NuXmvModelBuilder
 import com.jetbrains.rd.generator.nova.PredefinedType
 import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
+import sootup.core.jimple.common.constant.BooleanConstant
+import sootup.core.jimple.common.constant.IntConstant
+import sootup.core.jimple.common.expr.Expr
+import sootup.core.jimple.common.expr.JAddExpr
 import sootup.core.jimple.common.ref.JInstanceFieldRef
 import sootup.core.jimple.common.stmt.JAssignStmt
 import sootup.core.jimple.common.stmt.JGotoStmt
 import sootup.core.jimple.common.stmt.JIfStmt
 import sootup.core.jimple.common.stmt.JInvokeStmt
+import sootup.core.jimple.common.stmt.JReturnVoidStmt
 import sootup.core.signatures.MethodSignature
 import sootup.core.types.PrimitiveType
 import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
+import sootup.java.core.jimple.basic.JavaLocal
 import sootup.java.core.views.JavaView
 import java.io.BufferedReader
 import java.io.File
@@ -135,6 +141,7 @@ class Analyzer(
                                         VariableType.BOOL -> {
                                             variable.initValue.boolValue = stmt.uses[1].toString().toBoolean()
                                         }
+                                        VariableType.UNKNOWN -> {}
                                     }
                                     break
                                 }
@@ -153,42 +160,138 @@ class Analyzer(
         }
 
         //
-        fun analyse(methodSignature: MethodSignature) {
+        fun calculateExpression(expr: Expr): Variable {
+            val value = VariableValue()
+            when (expr) {
+                is JAddExpr -> {
+                    expr.op1
+                }
+            }
+            return Variable("result", VariableType.INT, value, value, false)
+        }
+
+        //
+        fun analyseMethod(methodSignature: MethodSignature) {
             val method = view.getMethod(methodSignature).get()
-            for (stmt in method.body.stmts) {
+            val localVars = mutableListOf<Variable>()
+            var stmt = method.body.stmts[0]
+            while (stmt !is JReturnVoidStmt) {
                 when (stmt) {
                     is JAssignStmt -> {
-                        if (stmt.leftOp is JInstanceFieldRef) {
-                            val varSignature = (stmt.leftOp as JInstanceFieldRef).fieldSignature
-                            when (varSignature.type) {
-                                PrimitiveType.getInt()-> {
-                                    stateMachines[varSignature.name]?.add(
-                                        VariableValue(intValue = stmt.rightOp.toString().toInt())
-                                    )
+                        val newValue = VariableValue()
+                        when (stmt.rightOp) {
+                            is IntConstant -> {
+                                newValue.intValue = stmt.rightOp.toString().toInt()
+                            }
+                            is BooleanConstant -> {
+                                newValue.boolValue = stmt.rightOp.toString().toBoolean()
+                            }
+                            is JInstanceFieldRef -> {
+                                val varName = (stmt.rightOp as JInstanceFieldRef).fieldSignature.name
+                                for (variable in vars) {
+                                    if (variable.name == varName) {
+                                        when (variable.type) {
+                                            VariableType.INT -> newValue.intValue = variable.value.intValue
+                                            VariableType.BOOL -> newValue.boolValue = variable.value.boolValue
+                                            VariableType.UNKNOWN -> {}
+                                        }
+                                        break
+                                    }
                                 }
-                                PrimitiveType.getBoolean()-> {
-                                    stateMachines[varSignature.name]?.add(
-                                        VariableValue(boolValue = stmt.rightOp.toString().toBoolean())
-                                    )
+                            }
+                            is JavaLocal -> {
+                                val varName = (stmt.rightOp as JavaLocal).name
+                                for (variable in localVars) {
+                                    if (variable.name == varName) {
+                                        when (variable.type) {
+                                            VariableType.INT -> newValue.intValue = variable.value.intValue
+                                            VariableType.BOOL -> newValue.boolValue = variable.value.boolValue
+                                            VariableType.UNKNOWN -> {}
+                                        }
+                                        break
+                                    }
+                                }
+                            }
+                            is Expr -> {
+                                val variable = calculateExpression(stmt.rightOp as Expr)
+                                when (variable.type) {
+                                    VariableType.INT -> newValue.intValue = variable.value.intValue
+                                    VariableType.BOOL -> newValue.boolValue = variable.value.boolValue
+                                    VariableType.UNKNOWN -> {}
                                 }
                             }
                         }
-                    }
-                    is JIfStmt -> {
 
-                    }
-                    is JGotoStmt -> {
-
+                        when (stmt.leftOp) {
+                            is JInstanceFieldRef -> {
+                                val varSignature = (stmt.leftOp as JInstanceFieldRef).fieldSignature
+                                for (variable in vars) {
+                                    if (variable.name == varSignature.name) {
+                                        when (varSignature.type) {
+                                            PrimitiveType.getInt() -> {
+                                                variable.value.intValue = newValue.intValue
+                                                stateMachines[variable.name]?.add(
+                                                    VariableValue(intValue = variable.value.intValue)
+                                                )
+                                            }
+                                            PrimitiveType.getBoolean() -> {
+                                                variable.value.boolValue = newValue.boolValue
+                                                stateMachines[variable.name]?.add(
+                                                    VariableValue(boolValue = variable.value.boolValue)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            is JavaLocal -> {
+                                val type = when (stmt.rightOp.type) {
+                                    PrimitiveType.getInt() -> VariableType.INT
+                                    PrimitiveType.getBoolean() -> VariableType.BOOL
+                                    else -> VariableType.UNKNOWN
+                                }
+                                val value = when (stmt.rightOp.type) {
+                                    PrimitiveType.getInt() -> VariableValue(intValue=newValue.intValue)
+                                    PrimitiveType.getBoolean() -> VariableValue(boolValue = newValue.boolValue)
+                                    else -> VariableValue()
+                                }
+                                val varName = (stmt.leftOp as JavaLocal).name
+                                var exists = false
+                                for (variable in localVars) {
+                                    if (variable.name == varName) {
+                                        exists = true
+                                        variable.value = value
+                                        break
+                                    }
+                                }
+                                if (!exists) localVars.add(
+                                    Variable(varName, type, value, value, false)
+                                )
+                            }
+                        }
                     }
                     is JInvokeStmt -> {
-                        analyse(stmt.invokeExpr.methodSignature)
+                        analyseMethod(stmt.invokeExpr.methodSignature)
+                    }
+                }
+
+                stmt = when (stmt) {
+                    is JIfStmt -> {
+                        method.body.stmts[method.body.stmts.indexOf(stmt) + 1] //
+                        //stmt.getTargetStmts(method.body)[0]
+                    }
+                    is JGotoStmt -> {
+                        stmt.getTargetStmts(method.body)[0]
+                    }
+                    else -> { // JAssignStmt, JInvokeStmt and so on
+                        method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
                     }
                 }
             }
         }
 
         // start the analysis with the 'main()' function (entry point)
-        analyse(view.identifierFactory.getMethodSignature(classType, "main", "void", listOf()))
+        analyseMethod(view.identifierFactory.getMethodSignature(classType, "main", "void", listOf()))
 
         return stateMachines
     }

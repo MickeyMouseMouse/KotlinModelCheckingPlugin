@@ -81,11 +81,13 @@ class PluginAction: DumbAwareAction() {
                     property.nameAsSafeName.asString(),
                     VariableType.INT,
                     VariableValue(intValue = initValueString?.toInt()),
+                    VariableValue(intValue = initValueString?.toInt()),
                     false
                 )
                 "boolean" -> newVar = Variable(
                     property.nameAsSafeName.asString(),
                     VariableType.BOOL,
+                    VariableValue(boolValue = initValueString?.toBoolean()),
                     VariableValue(boolValue = initValueString?.toBoolean()),
                     false
                 )

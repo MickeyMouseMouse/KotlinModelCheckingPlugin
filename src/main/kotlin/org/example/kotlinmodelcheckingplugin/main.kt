@@ -14,10 +14,10 @@ fun main() {
         sourceCode,
         "TrafficLight",
         mutableListOf(
-            Variable("mode", VariableType.INT, VariableValue(intValue=0), true),
-            Variable("red", VariableType.BOOL, VariableValue(boolValue=false), false),
-            Variable("green", VariableType.BOOL, VariableValue(boolValue=false), false),
-            Variable("yellow", VariableType.BOOL, VariableValue(boolValue=false), false)
+            Variable("mode", VariableType.INT, VariableValue(intValue=0), VariableValue(intValue=0),true),
+            Variable("red", VariableType.BOOL, VariableValue(boolValue=false), VariableValue(boolValue=false), false),
+            Variable("green", VariableType.BOOL, VariableValue(boolValue=false), VariableValue(boolValue=false), false),
+            Variable("yellow", VariableType.BOOL, VariableValue(boolValue=false), VariableValue(boolValue=false), false)
         ),
         listOf(
             "G (!(red = TRUE & yellow = TRUE & green = TRUE))"
