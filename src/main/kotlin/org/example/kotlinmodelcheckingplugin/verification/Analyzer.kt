@@ -320,18 +320,20 @@ class Analyzer(
                                     if (variable.name == varSignature.name) {
                                         when (varSignature.type) {
                                             PrimitiveType.getInt() -> {
-                                                variable.value.intValue = result.getValue() as Int
+                                                val newValue = result.getValue() as Int
                                                 stateMachines[variable.name]?.add(
-                                                    VariableValue(intValue = variable.value.intValue),
+                                                    VariableValue(intValue = newValue),
                                                     getStateVars()
                                                 )
+                                                variable.value.intValue = newValue
                                             }
                                             PrimitiveType.getBoolean() -> {
-                                                variable.value.boolValue = (result.getValue() as Int) == 1
+                                                val newValue = (result.getValue() as Int) == 1
                                                 stateMachines[variable.name]?.add(
-                                                    VariableValue(boolValue = variable.value.boolValue),
+                                                    VariableValue(boolValue = newValue),
                                                     getStateVars()
                                                 )
+                                                variable.value.boolValue = newValue
                                             }
                                         }
                                         break
@@ -417,12 +419,10 @@ class Analyzer(
         val stateMachines = buildStateMachines(jarFile)
 
 
-        return NuXmvModelBuilder(
+        val model = NuXmvModelBuilder(
             vars, stateMachines, ltlFormulas, ctlFormulas
         ).getModel()
 
-        //return runModelChecker(model)
-
-        //return "mock"
+        return runModelChecker(model).second
     }
 }

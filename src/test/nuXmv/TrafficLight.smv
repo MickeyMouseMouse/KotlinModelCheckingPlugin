@@ -11,11 +11,10 @@ ASSIGN
     init(green) := FALSE;
 
     next(mode) := case
-        mode = 0 : {0, 1};
+        mode = 0 | mode = 4 : {0, 1};
         mode = 1 : {0, 2};
         mode = 2 : {0, 3};
         mode = 3 : {0, 4};
-        mode = 4 : {0, 1};
         TRUE : mode;
     esac;
 

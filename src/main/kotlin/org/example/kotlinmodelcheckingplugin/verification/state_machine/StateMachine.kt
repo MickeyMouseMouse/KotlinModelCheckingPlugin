@@ -30,4 +30,34 @@ class StateMachine(initValue: VariableValue) {
             headIndex = vertices.size - 1
         }
     }
+
+    fun getTransitions(): MutableList<Transition> { // // Pair<target_ids, all_transition_conditions>
+        val transitions = mutableListOf<Transition>()
+        for (i in 0..<vertices.size) {
+            val allConditions = mutableListOf<List<Variable>>()
+            for (edge in edges) {
+                if (edge.toIndex == i) {
+                    allConditions.add(edge.conditions)
+                }
+            }
+            transitions.add(Transition(mutableListOf(i), allConditions))
+        }
+
+        // merge transitions with the same conditions
+        var i = 0
+        while (i < transitions.size) {
+            var j = i + 1
+            while (j < transitions.size) {
+                if (transitions[i].allConditions == transitions[j].allConditions) {
+                    transitions[i].targetIds.addAll(transitions[j].targetIds)
+                    transitions.removeAt(j)
+                } else {
+                    j++
+                }
+            }
+            i++
+        }
+
+        return transitions
+    }
 }

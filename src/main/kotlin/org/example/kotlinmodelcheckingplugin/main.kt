@@ -6,7 +6,10 @@ import java.io.File
 
 // for debug
 fun main() {
-    val sourceCode = File("src/test/kotlin/TrafficLight.kt").readText()
+    val trafficLightPath = "src/test/kotlin/TrafficLight.kt"
+    val atmPath = "src/test/kotlin/ATM.kt"
+
+    val sourceCode = File(trafficLightPath).readText()
         .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(StateVar|LTL|CTL)".toRegex(), "")
         .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
 

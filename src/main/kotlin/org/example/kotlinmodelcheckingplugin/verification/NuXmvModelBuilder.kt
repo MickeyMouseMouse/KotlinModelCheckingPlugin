@@ -65,10 +65,64 @@ class NuXmvModelBuilder(
         val result = StringBuilder()
         for ((varName, stateMachine) in stateMachines) {
             result.append("${tab}next(${varName}) := case\n")
-            // TODO
+
+            for (transition in stateMachine.getTransitions()) {
+                val transitionDescription = StringBuilder("${tab}${tab}")
+                for (i in transition.allConditions.indices) {
+                    val conditionList = transition.allConditions[i]
+                    val conditionDescription = getConditionDescription(conditionList)
+                    if (transition.allConditions.indices.last == 0) {
+                        transitionDescription.append(conditionDescription)
+                    } else {
+                        transitionDescription.append("(${conditionDescription})")
+                        if (i != transition.allConditions.indices.last) {
+                            transitionDescription.append(" | ")
+                        }
+                    }
+                }
+                transitionDescription.append(" : ")
+                if (transition.targetIds.size > 1) transitionDescription.append("{")
+                for (i in transition.targetIds.indices) {
+                    val vertex = stateMachine.vertices[transition.targetIds[i]]
+                    when (vertex.type) {
+                        VariableType.INT -> transitionDescription.append(vertex.intValue)
+                        VariableType.DOUBLE -> transitionDescription.append(vertex.doubleValue)
+                        VariableType.BOOL -> transitionDescription.append(vertex.boolValue.toString().uppercase())
+                        VariableType.UNKNOWN -> {}
+                    }
+
+                    if (i != transition.targetIds.indices.last) transitionDescription.append(", ")
+                }
+                if (transition.targetIds.size > 1) transitionDescription.append("}")
+                transitionDescription.append(";\n")
+
+                result.append(transitionDescription)
+            }
+
+            result.append("${tab}${tab}TRUE : ${varName};\n")
+
             result.append("${tab}esac;\n\n")
         }
         return result
+    }
+
+    private fun getConditionDescription(conditionList: List<Variable>): StringBuilder {
+        val conditionDescription = StringBuilder()
+        for (i in conditionList.indices) {
+            val variable = conditionList[i]
+            when (variable.value.type) {
+                VariableType.INT -> {
+                    conditionDescription.append("${variable.name} = ${variable.value.intValue}")
+                }
+                VariableType.BOOL -> {
+                    conditionDescription.append("${variable.name} = ${variable.value.boolValue.toString().uppercase()}")
+                }
+                VariableType.DOUBLE -> {}
+                VariableType.UNKNOWN -> {}
+            }
+            if (i != conditionList.indices.last) conditionDescription.append(" & ")
+        }
+        return conditionDescription
     }
 
     private fun getSpecsBlock(): StringBuilder {
