@@ -1,3 +1,5 @@
+package org.example.kotlinmodelcheckingplugin.verification
+
 import org.example.kotlinmodelcheckingplugin.verification.variable.*
 import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
 import org.example.kotlinmodelcheckingplugin.verification.variable.Variable
@@ -14,7 +16,7 @@ class NuXmvModelBuilder(
         val result = StringBuilder()
         for (variable in vars) {
             result.append("${tab}${variable.name}: ")
-            when (variable.type) {
+            when (variable.value.type) {
                 VariableType.INT -> {
                     val vertices = stateMachines[variable.name]?.vertices
                     if (vertices != null) {
@@ -43,7 +45,7 @@ class NuXmvModelBuilder(
         val result = StringBuilder()
         for (variable in vars) {
             result.append("${tab}init(${variable.name}) := ")
-            when (variable.type) {
+            when (variable.value.type) {
                 VariableType.INT -> {
                     result.append("${variable.initValue.intValue};\n")
                 }
@@ -61,8 +63,10 @@ class NuXmvModelBuilder(
 
     private fun getStateMachineBlock(): StringBuilder {
         val result = StringBuilder()
-        for (stateMachine in stateMachines) {
-
+        for ((varName, stateMachine) in stateMachines) {
+            result.append("${tab}next(${varName}) := case\n")
+            // TODO
+            result.append("${tab}esac;\n\n")
         }
         return result
     }

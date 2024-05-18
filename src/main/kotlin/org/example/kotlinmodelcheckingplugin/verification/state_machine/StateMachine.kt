@@ -1,5 +1,6 @@
 package org.example.kotlinmodelcheckingplugin.verification.state_machine
 
+import org.example.kotlinmodelcheckingplugin.verification.variable.Variable
 import org.example.kotlinmodelcheckingplugin.verification.variable.VariableValue
 
 class StateMachine(initValue: VariableValue) {
@@ -12,7 +13,7 @@ class StateMachine(initValue: VariableValue) {
         headIndex = 0
     }
 
-    fun add(value: VariableValue, conditions: List<Pair<String, String>> = listOf()) {
+    fun add(value: VariableValue, conditions: List<Variable>) {
         var exists = false
         for (i in 0..< vertices.size) {
             if (vertices[i] == value) {
