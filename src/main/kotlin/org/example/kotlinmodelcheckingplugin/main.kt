@@ -46,7 +46,7 @@ fun main() {
             "G (!(red = TRUE & yellow = TRUE & green = TRUE))"
         ),
         listOf(
-
+            "AG mode < 5"
         )
     )
     print(analyzer.start())

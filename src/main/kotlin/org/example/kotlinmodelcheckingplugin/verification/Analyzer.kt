@@ -138,12 +138,15 @@ class Analyzer(
                                     when (variable.value.type) {
                                         VariableType.INT -> {
                                             variable.initValue.intValue = stmt.uses[1].toString().toInt()
+                                            variable.value.intValue = stmt.uses[1].toString().toInt()
                                         }
                                         VariableType.DOUBLE -> {
                                             variable.initValue.doubleValue = stmt.uses[1].toString().toDouble()
+                                            variable.value.doubleValue = stmt.uses[1].toString().toDouble()
                                         }
                                         VariableType.BOOL -> {
                                             variable.initValue.boolValue = stmt.uses[1].toString().toBoolean()
+                                            variable.value.boolValue = stmt.uses[1].toString().toBoolean()
                                         }
                                         VariableType.UNKNOWN -> {}
                                     }
@@ -178,7 +181,9 @@ class Analyzer(
             return condition
         }
 
-        //
+        /**
+         *
+         */
         fun calculate(value: Value, localVars: List<Variable>): VariableValue {
             lateinit var result : VariableValue
             when (value) {
@@ -304,7 +309,9 @@ class Analyzer(
             return result
         }
 
-        //
+        /**
+         *
+         */
         fun analyseMethod(methodSignature: MethodSignature) {
             val method = view.getMethod(methodSignature).get()
             val localVars = mutableListOf<Variable>()
@@ -412,17 +419,17 @@ class Analyzer(
      */
     fun start(): String {
         val (result: Pair<Int, String>, jarFile: File?) = compileSourceCode()
-        if (jarFile == null) {
-            return "Compilation failed: " + result.second
-        }
+        if (jarFile == null) return "Compilation failed: " + result.second
 
         val stateMachines = buildStateMachines(jarFile)
-
 
         val model = NuXmvModelBuilder(
             vars, stateMachines, ltlFormulas, ctlFormulas
         ).getModel()
 
+        print(model) // tmp
+
         return runModelChecker(model).second
+
     }
 }

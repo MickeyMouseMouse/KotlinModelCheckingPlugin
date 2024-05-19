@@ -13,22 +13,22 @@ data class VariableValue(
         boolValue = null
     )
 
-    constructor(intValue: Int?) : this(
-        type = if (intValue == null) VariableType.UNKNOWN else VariableType.INT,
+    constructor(type: VariableType? = null, intValue: Int?) : this(
+        type = type ?: if (intValue == null) VariableType.UNKNOWN else VariableType.INT,
         intValue = intValue,
         doubleValue = null,
         boolValue = null
     )
 
-    constructor(doubleValue: Double?) : this(
-        type = if (doubleValue == null) VariableType.UNKNOWN else VariableType.DOUBLE,
+    constructor(type: VariableType? = null, doubleValue: Double?) : this(
+        type = type ?: if (doubleValue == null) VariableType.UNKNOWN else VariableType.DOUBLE,
         intValue = null,
         doubleValue = doubleValue,
         boolValue = null
     )
 
-    constructor(boolValue: Boolean?) : this(
-        type = if (boolValue == null) VariableType.UNKNOWN else VariableType.BOOL,
+    constructor(type: VariableType? = null, boolValue: Boolean?) : this(
+        type = type ?: if (boolValue == null) VariableType.UNKNOWN else VariableType.BOOL,
         intValue = null,
         doubleValue = null,
         boolValue = boolValue
