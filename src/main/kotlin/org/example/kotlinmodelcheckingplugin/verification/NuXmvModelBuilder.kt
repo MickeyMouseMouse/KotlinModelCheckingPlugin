@@ -6,14 +6,43 @@ import org.example.kotlinmodelcheckingplugin.verification.variable.Variable
 
 class NuXmvModelBuilder(
     private val vars: List<Variable>,
+    private val consts: List<Constant>,
     private val stateMachines: Map<String, StateMachine>,
     private val ltlFormulas: List<String>,
     private val ctlFormulas: List<String>
 ) {
     private val tab = "    " // 4 spaces
 
+    /**
+     *
+     */
+    fun getModel(): String {
+        val model = StringBuilder()
+        model.append("MODULE main\n")
+            .append(getDefineBlock())
+            .append(getVarBlock())
+            .append("ASSIGN\n")
+                .append(getInitBlock())
+                .append("\n")
+                .append(getStateMachineBlock())
+                .append("\n")
+            .append(getSpecsBlock())
+
+        return model.toString()
+    }
+
+    private fun getDefineBlock(): StringBuilder {
+        if (consts.isEmpty()) return StringBuilder()
+
+        val result = StringBuilder("DEFINE\n")
+        for (const in consts) {
+            result.append("${tab}${const.name} := ${const.value.getValue()};\n")
+        }
+        return result
+    }
+
     private fun getVarBlock(): StringBuilder {
-        val result = StringBuilder()
+        val result = StringBuilder("VAR\n")
         for (variable in vars) {
             result.append("${tab}${variable.name}: ")
             when (variable.value.type) {
@@ -130,19 +159,5 @@ class NuXmvModelBuilder(
         ltlFormulas.forEach{ result.append("LTLSPEC\n${it}\n\n") }
         ctlFormulas.forEach{ result.append("CTLSPEC\n${it}\n\n") }
         return result
-    }
-
-
-    /**
-     *
-     */
-    fun getModel(): String {
-        val model = StringBuilder()
-        model.append("MODULE main\n")
-            .append("VAR\n").append(getVarBlock())
-            .append("ASSIGN\n").append(getInitBlock()).append("\n").append(getStateMachineBlock()).append("\n")
-            .append(getSpecsBlock())
-
-        return model.toString()
     }
 }

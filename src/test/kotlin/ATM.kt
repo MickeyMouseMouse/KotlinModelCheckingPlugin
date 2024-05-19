@@ -13,7 +13,7 @@ class ATM {
 
     fun main() {
         for (i in 0..5) {
-            next(false, false, false)
+            next(false, true, false)
         }
     }
 

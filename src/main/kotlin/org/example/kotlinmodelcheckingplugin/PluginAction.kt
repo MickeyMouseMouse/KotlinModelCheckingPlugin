@@ -67,38 +67,53 @@ class PluginAction: DumbAwareAction() {
 
         val ktClass = e.getData(PSI_ELEMENT) as KtClass
 
-        // retrieve variables
+        // retrieve variables and constants
         val vars = mutableListOf<Variable>()
+        val consts = mutableListOf<Constant>()
         for (property in ktClass.getProperties()) {
-            val returnTypeReference = property.getReturnTypeReference()
-            val propertyType = (returnTypeReference?.getTypeText() ?: "unknown").lowercase()
-
+            val propertyType = (property.getReturnTypeReference()?.getTypeText() ?: "unknown").lowercase()
             val initValueString = property.initializer?.text
+            if (property.isVar) {
+                lateinit var newVar: Variable
+                when (propertyType) {
+                    "int" -> newVar = Variable(
+                        property.nameAsSafeName.asString(),
+                        VariableValue(type = VariableType.INT, intValue = initValueString?.toInt()),
+                        VariableValue(type = VariableType.INT, intValue = initValueString?.toInt()),
+                        false
+                    )
 
-            lateinit var newVar: Variable
-            when (propertyType) {
-                "int" -> newVar = Variable(
-                    property.nameAsSafeName.asString(),
-                    VariableValue(type = VariableType.INT, intValue = initValueString?.toInt()),
-                    VariableValue(type = VariableType.INT, intValue = initValueString?.toInt()),
-                    false
-                )
-                "boolean" -> newVar = Variable(
-                    property.nameAsSafeName.asString(),
-                    VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean()),
-                    VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean()),
-                    false
-                )
-            }
-
-            for (annotation in property.annotationEntries) {
-                if (annotation.shortName?.asString() == "StateVar") {
-                    newVar.isState = true
-                    break
+                    "boolean" -> newVar = Variable(
+                        property.nameAsSafeName.asString(),
+                        VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean()),
+                        VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean()),
+                        false
+                    )
                 }
-            }
 
-            vars.add(newVar)
+                for (annotation in property.annotationEntries) {
+                    if (annotation.shortName?.asString() == "StateVar") {
+                        newVar.isState = true
+                        break
+                    }
+                }
+
+                vars.add(newVar)
+            } else { // const
+                lateinit var newConst: Constant
+                when (propertyType) {
+                    "int" -> newConst = Constant(
+                        property.nameAsSafeName.asString(),
+                        VariableValue(type = VariableType.INT, intValue = initValueString?.toInt())
+                    )
+
+                    "boolean" -> newConst = Constant(
+                        property.nameAsSafeName.asString(),
+                        VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean())
+                    )
+                }
+                consts.add(newConst)
+            }
         }
 
         // retrieve LTL and CTL formulas
@@ -139,6 +154,7 @@ class PluginAction: DumbAwareAction() {
             sourceCode,
             ktClass.name.toString(),
             vars,
+            consts,
             ltlFormulas,
             ctlFormulas
         )

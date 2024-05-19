@@ -40,7 +40,7 @@ class StateMachine(initValue: VariableValue) {
                     allConditions.add(edge.conditions)
                 }
             }
-            transitions.add(Transition(mutableListOf(i), allConditions))
+            if (allConditions.isNotEmpty()) transitions.add(Transition(mutableListOf(i), allConditions))
         }
 
         // merge transitions with the same conditions

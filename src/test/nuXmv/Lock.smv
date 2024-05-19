@@ -1,0 +1,17 @@
+MODULE main
+DEFINE
+	secret1 := 1;
+	secret2 := 2;
+	secret3 := 3;
+VAR
+    value1: 0..9;
+    value2: 0..9;
+	value3: 0..9;
+	isOpen: boolean
+ASSIGN
+    init(value1) := 0;
+    init(value1) := 0;
+    init(value1) := 0;
+    init(isOpen) := FALSE;
+	
+	

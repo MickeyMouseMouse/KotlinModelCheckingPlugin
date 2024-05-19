@@ -6,11 +6,12 @@ import java.io.File
 
 // for debug
 fun main() {
-    //trafficLightTest()
-    atmTest()
+    trafficLight()
+    atm()
+    lock()
 }
 
-fun trafficLightTest() {
+fun trafficLight() {
     val sourceCode = File("src/test/kotlin/TrafficLight.kt").readText()
         .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(StateVar|LTL|CTL)".toRegex(), "")
         .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
@@ -18,7 +19,7 @@ fun trafficLightTest() {
     val analyzer = Analyzer(
         sourceCode,
         "TrafficLight",
-        mutableListOf(
+        listOf(
             Variable(
                 "mode",
                 VariableValue(intValue=0),
@@ -44,6 +45,7 @@ fun trafficLightTest() {
                 false
             )
         ),
+        listOf(),
         listOf(
             "G (!(red = TRUE & yellow = TRUE & green = TRUE))"
         ),
@@ -57,7 +59,7 @@ fun trafficLightTest() {
     print(analyzer.modelCheckingResult)
 }
 
-fun atmTest() {
+fun atm() {
     val sourceCode = File("src/test/kotlin/ATM.kt").readText()
         .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(\\*|StateVar|LTL|CTL)".toRegex(), "")
         .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
@@ -65,7 +67,7 @@ fun atmTest() {
     val analyzer = Analyzer(
         sourceCode,
         "ATM",
-        mutableListOf(
+        listOf(
             Variable(
                 "mode",
                 VariableValue(intValue=0),
@@ -73,8 +75,70 @@ fun atmTest() {
                 true
             )
         ),
+        listOf(),
         listOf(
             "G ((mode=0) -> X(mode!=5))"
+        ),
+        listOf(
+
+        )
+    )
+
+    analyzer.start()
+    print(analyzer.model)
+    print(analyzer.modelCheckingResult)
+}
+
+fun lock() {
+    val sourceCode = File("src/test/kotlin/Lock.kt").readText()
+        .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(\\*|StateVar|LTL|CTL)".toRegex(), "")
+        .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
+
+    val analyzer = Analyzer(
+        sourceCode,
+        "Lock",
+        listOf(
+            Variable(
+                "value1",
+                VariableValue(intValue=0),
+                VariableValue(intValue=0),
+                true
+            ),
+            Variable(
+                "value2",
+                VariableValue(intValue=0),
+                VariableValue(intValue=0),
+                true
+            ),
+            Variable(
+                "value3",
+                VariableValue(intValue=0),
+                VariableValue(intValue=0),
+                true
+            ),
+            Variable(
+                "isOpen",
+                VariableValue(boolValue=false),
+                VariableValue(boolValue=false),
+                false
+            )
+        ),
+        listOf(
+            Constant(
+                "secret1",
+                VariableValue(intValue=1)
+            ),
+            Constant(
+                "secret2",
+                VariableValue(intValue=2)
+            ),
+            Constant(
+                "secret3",
+                VariableValue(intValue=3)
+            )
+        ),
+        listOf(
+            "G ((value1 != 1 & value1 != 2 & value3 != 3) -> X(isOpen = FALSE))"
         ),
         listOf(
 
