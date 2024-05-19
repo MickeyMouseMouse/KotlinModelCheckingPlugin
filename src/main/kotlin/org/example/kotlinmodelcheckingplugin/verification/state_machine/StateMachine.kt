@@ -1,19 +1,19 @@
 package org.example.kotlinmodelcheckingplugin.verification.state_machine
 
-import org.example.kotlinmodelcheckingplugin.verification.variable.Variable
-import org.example.kotlinmodelcheckingplugin.verification.variable.VariableValue
+import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
 
-class StateMachine(initValue: VariableValue) {
-    val vertices = mutableListOf<VariableValue>()
+class StateMachine(variable: Variable) {
+    val varName: String = variable.name
+    val vertices = mutableListOf<StmtValue>()
     val edges = mutableListOf<Edge>()
-    private var headIndex: Int
+    private var headIndex: Int // last visited vertex
 
     init {
-        vertices.add(initValue)
+        vertices.add(variable.initValue)
         headIndex = 0
     }
 
-    fun add(value: VariableValue, conditions: List<Variable>) {
+    fun addNextState(value: StmtValue, conditions: List<Variable>) {
         var exists = false
         for (i in 0..< vertices.size) {
             if (vertices[i] == value) {
@@ -31,7 +31,10 @@ class StateMachine(initValue: VariableValue) {
         }
     }
 
-    fun getTransitions(): MutableList<Transition> { // // Pair<target_ids, all_transition_conditions>
+    /**
+     * Retrieve information about transitions between states of a finite state machine
+     */
+    fun getTransitions(): List<Transition> {
         val transitions = mutableListOf<Transition>()
         for (i in 0..<vertices.size) {
             val allConditions = mutableListOf<List<Variable>>()
@@ -40,7 +43,7 @@ class StateMachine(initValue: VariableValue) {
                     allConditions.add(edge.conditions)
                 }
             }
-            if (allConditions.isNotEmpty()) transitions.add(Transition(mutableListOf(i), allConditions))
+            if (allConditions.isNotEmpty()) transitions.add(Transition(allConditions, mutableListOf(i)))
         }
 
         // merge transitions with the same conditions

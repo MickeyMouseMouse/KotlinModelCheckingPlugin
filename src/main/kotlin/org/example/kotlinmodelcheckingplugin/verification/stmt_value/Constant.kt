@@ -1,8 +1,8 @@
-package org.example.kotlinmodelcheckingplugin.verification.variable
+package org.example.kotlinmodelcheckingplugin.verification.stmt_value
 
 data class Constant(
     var name: String,
-    var value: VariableValue
+    var value: StmtValue
 ) {
     fun copy(): Constant {
         return Constant(name, value.copy())

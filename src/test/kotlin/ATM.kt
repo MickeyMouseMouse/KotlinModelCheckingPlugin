@@ -13,24 +13,32 @@ class ATM {
 
     fun main() {
         for (i in 0..5) {
-            next(false, true, false)
+            next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = false)
         }
+        //next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = true)
+        //next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = true)
     }
 
-    fun next(attempt1: Boolean, attempt2: Boolean, attempt3: Boolean) {
+    fun next(pinAttempt1: Boolean, pinAttempt2: Boolean, pinAttempt3: Boolean, amountCheck: Boolean) {
         when (mode) {
-            0 -> mode = 1
-            1 -> {
-                mode = if (attempt1) 4 else 2
+            0 -> { // "waiting new client"[0] -> "pincode check 1"[1]
+                mode = 1
             }
-            2 -> {
-                mode = if (attempt2) 4 else 3
+            1 -> { // "pincode check 1"[1] -> "amount check"[4] OR "pincode check 2"[2]
+                mode = if (pinAttempt1) 4 else 2
             }
-            3 -> {
-                mode = if (attempt3) 4 else 0
+            2 -> { // "pincode check 2"[2] -> "amount check"[4] OR "pincode check 3"[3]
+                mode = if (pinAttempt2) 4 else 3
             }
-            4 -> mode = 5
-            5 -> mode = 0
+            3 -> { // "pincode check 3"[3] -> "amount check"[4] OR "waiting new client"[0]
+                mode = if (pinAttempt3) 4 else 0
+            }
+            4 -> { // "amount check"[4] -> "withdraw"[5] OR "amount check"[4]
+                mode = if (amountCheck) 5 else 4
+            }
+            5 -> { // "withdraw"[5] -> "waiting new client"[0]
+                mode = 0
+            }
         }
     }
 }

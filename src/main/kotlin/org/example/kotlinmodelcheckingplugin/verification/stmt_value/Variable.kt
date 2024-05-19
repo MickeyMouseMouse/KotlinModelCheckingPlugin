@@ -1,9 +1,9 @@
-package org.example.kotlinmodelcheckingplugin.verification.variable
+package org.example.kotlinmodelcheckingplugin.verification.stmt_value
 
 data class Variable(
     var name: String,
-    var initValue: VariableValue,
-    var value: VariableValue,
+    var initValue: StmtValue,
+    var value: StmtValue,
     var isState: Boolean
 ) {
     fun copy(): Variable {

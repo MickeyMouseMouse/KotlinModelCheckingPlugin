@@ -1,20 +1,22 @@
 package org.example.kotlinmodelcheckingplugin.verification
 
-import org.example.kotlinmodelcheckingplugin.verification.variable.*
+import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
 import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
-import org.example.kotlinmodelcheckingplugin.verification.variable.Variable
 
+/**
+ * Class for building a program model in the nuXmv language
+ */
 class NuXmvModelBuilder(
-    private val vars: List<Variable>,
-    private val consts: List<Constant>,
-    private val stateMachines: Map<String, StateMachine>,
+    private val variables: List<Variable>,
+    private val constants: List<Constant>,
+    private val stateMachines: List<StateMachine>,
     private val ltlFormulas: List<String>,
     private val ctlFormulas: List<String>
 ) {
     private val tab = "    " // 4 spaces
 
     /**
-     *
+     * Create model from its component parts
      */
     fun getModel(): String {
         val model = StringBuilder()
@@ -31,69 +33,78 @@ class NuXmvModelBuilder(
         return model.toString()
     }
 
+    /**
+     * Declaring constants
+     */
     private fun getDefineBlock(): StringBuilder {
-        if (consts.isEmpty()) return StringBuilder()
+        if (constants.isEmpty()) return StringBuilder()
 
         val result = StringBuilder("DEFINE\n")
-        for (const in consts) {
-            result.append("${tab}${const.name} := ${const.value.getValue()};\n")
+        for (constant in constants) {
+            result.append("${tab}${constant.name} := ${constant.value.getValue()};\n")
         }
         return result
     }
 
+    /**
+     * Declaring variables
+     */
     private fun getVarBlock(): StringBuilder {
         val result = StringBuilder("VAR\n")
-        for (variable in vars) {
+        for (variable in variables) {
             result.append("${tab}${variable.name}: ")
             when (variable.value.type) {
-                VariableType.INT -> {
-                    val vertices = stateMachines[variable.name]?.vertices
-                    if (vertices != null) {
-                        var min = Int.MAX_VALUE
-                        var max = Int.MIN_VALUE
-                        for (vertex in vertices) {
-                            if (vertex.intValue!! < min) min = vertex.intValue!!
-                            if (vertex.intValue!! > max) max = vertex.intValue!!
-                        }
-                        result.append("${min}..${max};\n")
+                StmtType.INT -> {
+                    var min = Int.MAX_VALUE
+                    var max = Int.MIN_VALUE
+                    for (vertex in stateMachines.filter { it.varName == variable.name }[0].vertices) {
+                        if (vertex.intValue!! < min) min = vertex.intValue!!
+                        if (vertex.intValue!! > max) max = vertex.intValue!!
                     }
+                    result.append("${min}..${max};\n")
                 }
-                VariableType.DOUBLE -> {
+                StmtType.DOUBLE -> {
                     // TODO
                 }
-                VariableType.BOOL -> {
+                StmtType.BOOL -> {
                     result.append("boolean;\n")
                 }
-                VariableType.UNKNOWN -> {}
+                StmtType.UNKNOWN -> {}
             }
         }
         return result
     }
 
+    /**
+     * Assigning variables their initial values
+     */
     private fun getInitBlock(): StringBuilder {
         val result = StringBuilder()
-        for (variable in vars) {
+        for (variable in variables) {
             result.append("${tab}init(${variable.name}) := ")
             when (variable.value.type) {
-                VariableType.INT -> {
+                StmtType.INT -> {
                     result.append("${variable.initValue.intValue};\n")
                 }
-                VariableType.DOUBLE -> {
+                StmtType.DOUBLE -> {
                     result.append("${variable.initValue.doubleValue};\n")
                 }
-                VariableType.BOOL -> {
+                StmtType.BOOL -> {
                     result.append("${variable.initValue.boolValue.toString().uppercase()};\n")
                 }
-                VariableType.UNKNOWN -> {}
+                StmtType.UNKNOWN -> {}
             }
         }
         return result
     }
 
+    /**
+     * Description of finite state machines (transitions between states under appropriate conditions)
+     */
     private fun getStateMachineBlock(): StringBuilder {
         val result = StringBuilder()
-        for ((varName, stateMachine) in stateMachines) {
-            result.append("${tab}next(${varName}) := case\n")
+        for (stateMachine in stateMachines) {
+            result.append("${tab}next(${stateMachine.varName}) := case\n")
 
             for (transition in stateMachine.getTransitions()) {
                 val transitionDescription = StringBuilder("${tab}${tab}")
@@ -114,10 +125,10 @@ class NuXmvModelBuilder(
                 for (i in transition.targetIds.indices) {
                     val vertex = stateMachine.vertices[transition.targetIds[i]]
                     when (vertex.type) {
-                        VariableType.INT -> transitionDescription.append(vertex.intValue)
-                        VariableType.DOUBLE -> transitionDescription.append(vertex.doubleValue)
-                        VariableType.BOOL -> transitionDescription.append(vertex.boolValue.toString().uppercase())
-                        VariableType.UNKNOWN -> {}
+                        StmtType.INT -> transitionDescription.append(vertex.intValue)
+                        StmtType.DOUBLE -> transitionDescription.append(vertex.doubleValue)
+                        StmtType.BOOL -> transitionDescription.append(vertex.boolValue.toString().uppercase())
+                        StmtType.UNKNOWN -> {}
                     }
 
                     if (i != transition.targetIds.indices.last) transitionDescription.append(", ")
@@ -128,7 +139,7 @@ class NuXmvModelBuilder(
                 result.append(transitionDescription)
             }
 
-            result.append("${tab}${tab}TRUE : ${varName};\n")
+            result.append("${tab}${tab}TRUE : ${stateMachine.varName};\n")
 
             result.append("${tab}esac;\n\n")
         }
@@ -140,20 +151,23 @@ class NuXmvModelBuilder(
         for (i in conditionList.indices) {
             val variable = conditionList[i]
             when (variable.value.type) {
-                VariableType.INT -> {
+                StmtType.INT -> {
                     conditionDescription.append("${variable.name} = ${variable.value.intValue}")
                 }
-                VariableType.BOOL -> {
+                StmtType.BOOL -> {
                     conditionDescription.append("${variable.name} = ${variable.value.boolValue.toString().uppercase()}")
                 }
-                VariableType.DOUBLE -> {}
-                VariableType.UNKNOWN -> {}
+                StmtType.DOUBLE -> {}
+                StmtType.UNKNOWN -> {}
             }
             if (i != conditionList.indices.last) conditionDescription.append(" & ")
         }
         return conditionDescription
     }
 
+    /**
+     * Block with LTL and CTL specifications
+     */
     private fun getSpecsBlock(): StringBuilder {
         val result = StringBuilder()
         ltlFormulas.forEach{ result.append("LTLSPEC\n${it}\n\n") }

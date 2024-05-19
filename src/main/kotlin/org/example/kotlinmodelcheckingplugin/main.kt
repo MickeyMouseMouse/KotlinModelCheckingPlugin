@@ -1,7 +1,7 @@
 package org.example.kotlinmodelcheckingplugin
 
 import org.example.kotlinmodelcheckingplugin.verification.Analyzer
-import org.example.kotlinmodelcheckingplugin.verification.variable.*
+import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
 import java.io.File
 
 // for debug
@@ -22,41 +22,41 @@ fun trafficLight() {
         listOf(
             Variable(
                 "mode",
-                VariableValue(intValue=0),
-                VariableValue(intValue=0),
+                StmtValue(intValue=0),
+                StmtValue(intValue=0),
                 true
             ),
             Variable(
                 "red",
-                VariableValue(boolValue=false),
-                VariableValue(boolValue=false),
+                StmtValue(boolValue=false),
+                StmtValue(boolValue=false),
                 false
             ),
             Variable(
                 "green",
-                VariableValue(boolValue=false),
-                VariableValue(boolValue=false),
+                StmtValue(boolValue=false),
+                StmtValue(boolValue=false),
                 false
             ),
             Variable(
                 "yellow",
-                VariableValue(boolValue=false),
-                VariableValue(boolValue=false),
+                StmtValue(boolValue=false),
+                StmtValue(boolValue=false),
                 false
             )
         ),
-        listOf(),
-        listOf(
+        listOf(), // constants
+        listOf( // ltl
             "G (!(red = TRUE & yellow = TRUE & green = TRUE))"
         ),
-        listOf(
+        listOf( // ctl
             "AG mode < 5"
         )
     )
 
     analyzer.start()
     print(analyzer.model)
-    print(analyzer.modelCheckingResult)
+    println(analyzer.modelCheckingResult)
 }
 
 fun atm() {
@@ -70,23 +70,23 @@ fun atm() {
         listOf(
             Variable(
                 "mode",
-                VariableValue(intValue=0),
-                VariableValue(intValue=0),
+                StmtValue(intValue=0),
+                StmtValue(intValue=0),
                 true
             )
         ),
-        listOf(),
-        listOf(
+        listOf(), // constants
+        listOf( // ltl
             "G ((mode=0) -> X(mode!=5))"
         ),
-        listOf(
+        listOf( // ctl
 
         )
     )
 
     analyzer.start()
     print(analyzer.model)
-    print(analyzer.modelCheckingResult)
+    println(analyzer.modelCheckingResult)
 }
 
 fun lock() {
@@ -100,52 +100,52 @@ fun lock() {
         listOf(
             Variable(
                 "value1",
-                VariableValue(intValue=0),
-                VariableValue(intValue=0),
+                StmtValue(intValue=0),
+                StmtValue(intValue=0),
                 true
             ),
             Variable(
                 "value2",
-                VariableValue(intValue=0),
-                VariableValue(intValue=0),
+                StmtValue(intValue=0),
+                StmtValue(intValue=0),
                 true
             ),
             Variable(
                 "value3",
-                VariableValue(intValue=0),
-                VariableValue(intValue=0),
+                StmtValue(intValue=0),
+                StmtValue(intValue=0),
                 true
             ),
             Variable(
                 "isOpen",
-                VariableValue(boolValue=false),
-                VariableValue(boolValue=false),
+                StmtValue(boolValue=false),
+                StmtValue(boolValue=false),
                 false
             )
         ),
         listOf(
             Constant(
                 "secret1",
-                VariableValue(intValue=1)
+                StmtValue(intValue=1)
             ),
             Constant(
                 "secret2",
-                VariableValue(intValue=2)
+                StmtValue(intValue=2)
             ),
             Constant(
                 "secret3",
-                VariableValue(intValue=3)
+                StmtValue(intValue=3)
             )
         ),
-        listOf(
+        listOf( // ltl
             "G ((value1 != 1 & value1 != 2 & value3 != 3) -> X(isOpen = FALSE))"
         ),
-        listOf(
+        listOf( // ctl
 
         )
     )
 
     analyzer.start()
     print(analyzer.model)
-    print(analyzer.modelCheckingResult)
+    println(analyzer.modelCheckingResult)
 }

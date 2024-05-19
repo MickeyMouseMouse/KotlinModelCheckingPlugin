@@ -12,7 +12,7 @@ import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.rows
-import org.example.kotlinmodelcheckingplugin.verification.variable.*
+import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
 import org.jetbrains.annotations.ApiStatus
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.callableBuilder.getReturnTypeReference
 import org.jetbrains.kotlin.psi.KtClass
@@ -39,7 +39,7 @@ Build plugin:
 class PluginAction: DumbAwareAction() {
     @ApiStatus.Internal
     data class ModelData(
-        var stateVars: String,
+        var stateVariables: String,
         var ltlFormulas: String,
         var ctlFormulas: String,
         var output: String
@@ -49,7 +49,10 @@ class PluginAction: DumbAwareAction() {
 
     private lateinit var analyzer: Analyzer
 
-    override fun actionPerformed(e: AnActionEvent) { // popup menu event
+    /**
+     * Action on the pop-up menu event
+     */
+    override fun actionPerformed(e: AnActionEvent) {
         e.project ?: return
 
         val selectedFile = e.getData(PlatformDataKeys.VIRTUAL_FILE) ?: return
@@ -67,9 +70,9 @@ class PluginAction: DumbAwareAction() {
 
         val ktClass = e.getData(PSI_ELEMENT) as KtClass
 
-        // retrieve variables and constants
-        val vars = mutableListOf<Variable>()
-        val consts = mutableListOf<Constant>()
+        // retrieve variables and constants from source code
+        val variables = mutableListOf<Variable>()
+        val constants = mutableListOf<Constant>()
         for (property in ktClass.getProperties()) {
             val propertyType = (property.getReturnTypeReference()?.getTypeText() ?: "unknown").lowercase()
             val initValueString = property.initializer?.text
@@ -78,15 +81,15 @@ class PluginAction: DumbAwareAction() {
                 when (propertyType) {
                     "int" -> newVar = Variable(
                         property.nameAsSafeName.asString(),
-                        VariableValue(type = VariableType.INT, intValue = initValueString?.toInt()),
-                        VariableValue(type = VariableType.INT, intValue = initValueString?.toInt()),
+                        StmtValue(type = StmtType.INT, intValue = initValueString?.toInt()),
+                        StmtValue(type = StmtType.INT, intValue = initValueString?.toInt()),
                         false
                     )
 
                     "boolean" -> newVar = Variable(
                         property.nameAsSafeName.asString(),
-                        VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean()),
-                        VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean()),
+                        StmtValue(type = StmtType.BOOL, boolValue = initValueString?.toBoolean()),
+                        StmtValue(type = StmtType.BOOL, boolValue = initValueString?.toBoolean()),
                         false
                     )
                 }
@@ -98,25 +101,25 @@ class PluginAction: DumbAwareAction() {
                     }
                 }
 
-                vars.add(newVar)
+                variables.add(newVar)
             } else { // const
                 lateinit var newConst: Constant
                 when (propertyType) {
                     "int" -> newConst = Constant(
                         property.nameAsSafeName.asString(),
-                        VariableValue(type = VariableType.INT, intValue = initValueString?.toInt())
+                        StmtValue(type = StmtType.INT, intValue = initValueString?.toInt())
                     )
 
                     "boolean" -> newConst = Constant(
                         property.nameAsSafeName.asString(),
-                        VariableValue(type = VariableType.BOOL, boolValue = initValueString?.toBoolean())
+                        StmtValue(type = StmtType.BOOL, boolValue = initValueString?.toBoolean())
                     )
                 }
-                consts.add(newConst)
+                constants.add(newConst)
             }
         }
 
-        // retrieve LTL and CTL formulas
+        // retrieve LTL and CTL formulas from annotations in the source code
         val ltlFormulas = mutableListOf<String>()
         val ctlFormulas = mutableListOf<String>()
         for (annotation in ktClass.annotationEntries) {
@@ -139,7 +142,7 @@ class PluginAction: DumbAwareAction() {
         }
 
         modelData = ModelData(
-            vars.filter { it.isState }.joinToString("\n") { it.name },
+            variables.filter { it.isState }.joinToString("\n") { it.name },
             ltlFormulas.joinToString("\n") { it },
             ctlFormulas.joinToString("\n") { it },
             ""
@@ -153,13 +156,14 @@ class PluginAction: DumbAwareAction() {
         analyzer = Analyzer(
             sourceCode,
             ktClass.name.toString(),
-            vars,
-            consts,
+            variables,
+            constants,
             ltlFormulas,
             ctlFormulas
         )
 
         /*
+        // check the necessary system dependencies (additional)
         val check = analyzer.checkDependencies()
         if (check.isNotEmpty()) {
             getErrorDialog(check).show()
@@ -206,7 +210,7 @@ class PluginAction: DumbAwareAction() {
                 lateinit var panel: DialogPanel
                 panel = panel {
                     row("State variables") {
-                        textArea().bindText(modelData::stateVars).rows(3).columns(50)
+                        textArea().bindText(modelData::stateVariables).rows(3).columns(50)
                     }
                     row("LTL formulas") {
                         textArea().bindText(modelData::ltlFormulas).rows(3).columns(50)
@@ -219,8 +223,11 @@ class PluginAction: DumbAwareAction() {
                     }
                     row {
                         button("Start") {
-                            analyzer.start()
-                            modelData.output = analyzer.modelCheckingResult
+                            if (analyzer.start()) {
+                                modelData.output = analyzer.modelCheckingResult
+                            } else {
+                                modelData.output = analyzer.error
+                            }
                             panel.reset()
 
                             // https://stackoverflow.com/questions/18725340/create-a-background-task-in-intellij-plugin
@@ -242,7 +249,7 @@ class PluginAction: DumbAwareAction() {
                             })
                             */
                         }.enabled(
-                            modelData.stateVars.isNotEmpty() and
+                            modelData.stateVariables.isNotEmpty() and
                                     (modelData.ltlFormulas.isNotEmpty() or modelData.ctlFormulas.isNotEmpty())
                         )
                         button("Cancel") {
