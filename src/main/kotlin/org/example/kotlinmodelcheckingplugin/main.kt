@@ -6,10 +6,12 @@ import java.io.File
 
 // for debug
 fun main() {
-    val trafficLightPath = "src/test/kotlin/TrafficLight.kt"
-    val atmPath = "src/test/kotlin/ATM.kt"
+    //trafficLightTest()
+    atmTest()
+}
 
-    val sourceCode = File(trafficLightPath).readText()
+fun trafficLightTest() {
+    val sourceCode = File("src/test/kotlin/TrafficLight.kt").readText()
         .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(StateVar|LTL|CTL)".toRegex(), "")
         .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
 
@@ -49,5 +51,37 @@ fun main() {
             "AG mode < 5"
         )
     )
-    print(analyzer.start())
+
+    analyzer.start()
+    print(analyzer.model)
+    print(analyzer.modelCheckingResult)
+}
+
+fun atmTest() {
+    val sourceCode = File("src/test/kotlin/ATM.kt").readText()
+        .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(\\*|StateVar|LTL|CTL)".toRegex(), "")
+        .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
+
+    val analyzer = Analyzer(
+        sourceCode,
+        "ATM",
+        mutableListOf(
+            Variable(
+                "mode",
+                VariableValue(intValue=0),
+                VariableValue(intValue=0),
+                true
+            )
+        ),
+        listOf(
+            "G ((mode=0) -> X(mode!=5))"
+        ),
+        listOf(
+
+        )
+    )
+
+    analyzer.start()
+    print(analyzer.model)
+    print(analyzer.modelCheckingResult)
 }

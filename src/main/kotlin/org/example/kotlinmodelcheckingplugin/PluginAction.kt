@@ -132,7 +132,7 @@ class PluginAction: DumbAwareAction() {
 
         // remove the plugin annotations from the source code
         val sourceCode = ktClass.text  // Full code: document.text
-            .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(StateVar|LTL|CTL)".toRegex(), "")
+            .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(\\*|StateVar|LTL|CTL)".toRegex(), "")
             .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
 
         analyzer = Analyzer(
@@ -203,7 +203,8 @@ class PluginAction: DumbAwareAction() {
                     }
                     row {
                         button("Start") {
-                            modelData.output = analyzer.start()
+                            analyzer.start()
+                            modelData.output = analyzer.modelCheckingResult
                             panel.reset()
 
                             // https://stackoverflow.com/questions/18725340/create-a-background-task-in-intellij-plugin

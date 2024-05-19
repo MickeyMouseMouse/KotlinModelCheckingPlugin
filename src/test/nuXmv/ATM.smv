@@ -1,0 +1,25 @@
+MODULE main
+VAR
+	-- mode 0 = waiting new client
+	-- mode 1 = pincode check 1
+	-- mode 2 = pincode check 2
+	-- mode 3 = pincode check 3
+	-- mode 4 = amount check
+	-- mode 5 = withdraw
+	mode: 0..5;
+ASSIGN
+	init(mode) := 0;
+
+	next(mode) := case
+		mode = 0 : {0, 1};
+		mode = 1 : {0, 2, 4};
+		mode = 2 : {0, 3, 4};
+		mode = 3 : {0, 4};
+		mode = 4 : {0, 4, 5};
+		mode = 5 : 0;
+	esac;
+
+
+LTLSPEC
+G ((mode=0) -> X(mode!=5))
+
