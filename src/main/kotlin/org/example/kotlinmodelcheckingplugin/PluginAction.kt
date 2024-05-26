@@ -1,19 +1,15 @@
 package org.example.kotlinmodelcheckingplugin
 
-import org.example.kotlinmodelcheckingplugin.verification.Analyzer
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys.PSI_ELEMENT
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
-import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.builder.rows
-import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
-import org.jetbrains.annotations.ApiStatus
+import org.example.kotlinmodelcheckingplugin.controller.Controller
+import org.example.kotlinmodelcheckingplugin.model.stmt_value.*
+import org.example.kotlinmodelcheckingplugin.view.View
 import org.jetbrains.kotlin.idea.quickfix.createFromUsage.callableBuilder.getReturnTypeReference
 import org.jetbrains.kotlin.psi.KtClass
 import javax.swing.Action
@@ -37,18 +33,6 @@ Build plugin:
 */
 
 class PluginAction: DumbAwareAction() {
-    @ApiStatus.Internal
-    data class ModelData(
-        var stateVariables: String,
-        var ltlFormulas: String,
-        var ctlFormulas: String,
-        var output: String
-    )
-
-    private lateinit var modelData: ModelData
-
-    private lateinit var analyzer: Analyzer
-
     /**
      * Action on the pop-up menu event
      */
@@ -71,6 +55,7 @@ class PluginAction: DumbAwareAction() {
         val ktClass = e.getData(PSI_ELEMENT) as KtClass
 
         // retrieve variables and constants from source code
+        val stateVariables = mutableListOf<Variable>()
         val variables = mutableListOf<Variable>()
         val constants = mutableListOf<Constant>()
         for (property in ktClass.getProperties()) {
@@ -101,7 +86,11 @@ class PluginAction: DumbAwareAction() {
                     }
                 }
 
-                variables.add(newVar)
+                if (newVar.isState) {
+                    stateVariables.add(newVar)
+                } else {
+                    variables.add(newVar)
+                }
             } else { // const
                 lateinit var newConst: Constant
                 when (propertyType) {
@@ -117,6 +106,11 @@ class PluginAction: DumbAwareAction() {
                 }
                 constants.add(newConst)
             }
+        }
+
+        if (stateVariables.isEmpty()) {
+            getErrorDialog("No state variables are specified (use @StateVar annotation)").show()
+            return
         }
 
         // retrieve LTL and CTL formulas from annotations in the source code
@@ -141,37 +135,28 @@ class PluginAction: DumbAwareAction() {
             }
         }
 
-        modelData = ModelData(
-            variables.filter { it.isState }.joinToString("\n") { it.name },
-            ltlFormulas.joinToString("\n") { it },
-            ctlFormulas.joinToString("\n") { it },
-            ""
-        )
+        if (ltlFormulas.isEmpty() && ctlFormulas.isEmpty()) {
+            getErrorDialog("No temporal formulas are specified (use @LTL and @CTL annotations)").show()
+            return
+        }
 
         // remove the plugin annotations from the source code
         val sourceCode = ktClass.text  // Full code: document.text
             .replace("import org\\.example\\.kotlinmodelcheckingplugin\\.annotations\\.(\\*|StateVar|LTL|CTL)".toRegex(), "")
             .replace("@(StateVar|LTL|CTL)(\\((.)+\\)|)".toRegex(), "")
 
-        analyzer = Analyzer(
+        val ctrl = Controller(
             sourceCode,
             ktClass.name.toString(),
+            stateVariables,
             variables,
             constants,
             ltlFormulas,
             ctlFormulas
         )
 
-        /*
-        // check the necessary system dependencies (additional)
-        val check = analyzer.checkDependencies()
-        if (check.isNotEmpty()) {
-            getErrorDialog(check).show()
-            return
-        }
-        */
-
-        getModelCheckingDialog().show()
+        val gui = View(ctrl)
+        gui.isVisible = true
     }
 
     private fun getErrorDialog(msg: String): DialogWrapper {
@@ -181,7 +166,7 @@ class PluginAction: DumbAwareAction() {
                 init()
             }
 
-            override fun createActions(): Array<Action> { // bottom buttons
+            override fun createActions(): Array<Action> { // bottom action buttons
                 return arrayOf(okAction)
             }
 
@@ -191,73 +176,6 @@ class PluginAction: DumbAwareAction() {
                         label(msg)
                     }
                 }
-            }
-        }
-    }
-
-    private fun getModelCheckingDialog(): DialogWrapper {
-        return object: DialogWrapper(true) {
-            init {
-                title = "Model Checking"
-                init()
-            }
-
-            override fun createActions(): Array<Action> { // bottom buttons
-                return arrayOf() // (okAction, cancelAction)
-            }
-
-            override fun createCenterPanel(): JComponent { // gui
-                lateinit var panel: DialogPanel
-                panel = panel {
-                    row("State variables") {
-                        textArea().bindText(modelData::stateVariables).rows(3).columns(50)
-                    }
-                    row("LTL formulas") {
-                        textArea().bindText(modelData::ltlFormulas).rows(3).columns(50)
-                    }
-                    row("CTL formulas") {
-                        textArea().bindText(modelData::ctlFormulas).rows(3).columns(50)
-                    }
-                    row("Result") {
-                        textArea().bindText(modelData::output).rows(12).columns(50)
-                    }
-                    row {
-                        button("Start") {
-                            if (analyzer.start()) {
-                                modelData.output = analyzer.modelCheckingResult
-                            } else {
-                                modelData.output = analyzer.error
-                            }
-                            panel.reset()
-
-                            // https://stackoverflow.com/questions/18725340/create-a-background-task-in-intellij-plugin
-                            /*
-                            ApplicationManager.getApplication().executeOnPooledThread {
-                                ApplicationManager.getApplication().runReadAction {
-                                    modelData.output = analyzer.start()
-                                    panel.reset()
-                                }
-                            }
-                            */
-
-                            /*
-                            ProgressManager.getInstance().run(object: Task.Backgroundable(modelData.project, "Model checking...") {
-                                override fun run(@NotNull progressIndicator: ProgressIndicator) {
-                                    modelData.output = analyzer.start()
-                                    panel.reset()
-                                }
-                            })
-                            */
-                        }.enabled(
-                            modelData.stateVariables.isNotEmpty() and
-                                    (modelData.ltlFormulas.isNotEmpty() or modelData.ctlFormulas.isNotEmpty())
-                        )
-                        button("Cancel") {
-                            doCancelAction()
-                        }
-                    }
-                }
-                return panel
             }
         }
     }

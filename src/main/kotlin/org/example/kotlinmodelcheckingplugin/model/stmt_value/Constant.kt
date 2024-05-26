@@ -1,4 +1,4 @@
-package org.example.kotlinmodelcheckingplugin.verification.stmt_value
+package org.example.kotlinmodelcheckingplugin.model.stmt_value
 
 data class Constant(
     var name: String,

@@ -1,6 +1,6 @@
-package org.example.kotlinmodelcheckingplugin.verification.state_machine
+package org.example.kotlinmodelcheckingplugin.model.state_machine
 
-import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
+import org.example.kotlinmodelcheckingplugin.model.stmt_value.*
 
 class StateMachine(variable: Variable) {
     val varName: String = variable.name

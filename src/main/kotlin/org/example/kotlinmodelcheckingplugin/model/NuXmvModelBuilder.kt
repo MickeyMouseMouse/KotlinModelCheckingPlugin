@@ -1,7 +1,7 @@
-package org.example.kotlinmodelcheckingplugin.verification
+package org.example.kotlinmodelcheckingplugin.model
 
-import org.example.kotlinmodelcheckingplugin.verification.stmt_value.*
-import org.example.kotlinmodelcheckingplugin.verification.state_machine.StateMachine
+import org.example.kotlinmodelcheckingplugin.model.stmt_value.*
+import org.example.kotlinmodelcheckingplugin.model.state_machine.StateMachine
 
 /**
  * Class for building a program model in the nuXmv language
