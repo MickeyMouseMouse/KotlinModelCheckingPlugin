@@ -43,16 +43,14 @@ class Controller(
                     resultTextArea.text += "Done\nAnalyzing... "
                     progressBar.value = 10
 
-                    val stateMachines = Analyzer(
-                        stateVariables + variables,
-                        constants
-                    ).buildStateMachines(className, jarFile)
+                    val allVariables = stateVariables + variables
+                    val stateMachines = Analyzer(allVariables, constants).buildStateMachines(className, jarFile)
 
                     resultTextArea.text += "Done\nBuilding a program model... "
                     progressBar.value = 60
 
                     val model = NuXmvModelBuilder(
-                        variables,
+                        allVariables,
                         constants,
                         stateMachines,
                         ltlFormulas,
