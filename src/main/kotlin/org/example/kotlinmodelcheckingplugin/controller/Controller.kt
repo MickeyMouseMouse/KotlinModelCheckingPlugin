@@ -44,7 +44,7 @@ class Controller(
                     progressBar.value = 10
 
                     val allVariables = stateVariables + variables
-                    val stateMachines = Analyzer(allVariables, constants).buildStateMachines(className, jarFile)
+                    val stateMachines = Analyzer(jarFile, className, allVariables, constants).buildStateMachines()
 
                     resultTextArea.text += "Done\nBuilding a program model... "
                     progressBar.value = 60
@@ -59,7 +59,7 @@ class Controller(
                     resultTextArea.text += "Done\nRunning a model checking... "
                     progressBar.value = 80
 
-                    resultTextArea.text = Tools.runModelChecker(className, model).second
+                    resultTextArea.text = model + Tools.runModelChecker(className, model).second
                     progressBar.value = 100
                 }
             }

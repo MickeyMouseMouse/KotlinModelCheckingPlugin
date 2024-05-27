@@ -28,6 +28,8 @@ import java.io.File
  * Class for analyzing the intermediate representation (Jimple) of a program
  */
 class Analyzer(
+    private val jarFile: File,
+    private val className: String,
     private val variables: List<Variable>,
     private val constants: List<Constant>
 ) {
@@ -37,20 +39,23 @@ class Analyzer(
     /**
      * The method retrieves finite state machines for variables
      */
-    fun buildStateMachines(className: String, jarFile: File): List<StateMachine> {
-        val inputLocation = JavaClassPathAnalysisInputLocation(jarFile.absolutePath)
-        view = JavaView(inputLocation)
+    fun buildStateMachines(): List<StateMachine> {
+        view = JavaView(JavaClassPathAnalysisInputLocation(jarFile.absolutePath))
         val classType = view.identifierFactory.getClassType(className)
 
         // class constructor
         analyzeMethod(
-            view.identifierFactory.getMethodSignature(classType, "<init>", "void", listOf()),
+            view.identifierFactory.getMethodSignature(
+                classType, "<init>", "void", listOf()
+            ),
             listOf()
         )
 
         // main() function
         analyzeMethod(
-            view.identifierFactory.getMethodSignature(classType, "main", "void", listOf()),
+            view.identifierFactory.getMethodSignature(
+                classType, "main", "void", listOf()
+            ),
             listOf()
         )
         return stateMachines
@@ -62,6 +67,7 @@ class Analyzer(
     private fun analyzeMethod(methodSignature: MethodSignature, args: List<Variable>): StmtValue {
         val methodOptional = view.getMethod(methodSignature)
         if (!methodOptional.isPresent) return StmtValue(type=StmtType.VOID)
+
         val method = methodOptional.get()
         val localVariables = mutableListOf<Variable>()
         var stmt = method.body.stmts[0]
@@ -194,7 +200,7 @@ class Analyzer(
                 }
             }
 
-            stmt = when (stmt) { // get next stmt
+            stmt = when (stmt) { // get the next stmt
                 is JIfStmt -> {
                     if  (calculate(stmt.condition, localVariables).getValue() as Boolean)
                         stmt.getTargetStmts(method.body)[0]

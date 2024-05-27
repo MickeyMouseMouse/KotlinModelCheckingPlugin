@@ -8,9 +8,9 @@ import java.io.File
 
 // for debug
 fun main() {
-    //trafficLight()
+    trafficLight()
     //atm()
-    lock()
+    //lock()
 }
 
 fun trafficLight() {
@@ -51,7 +51,7 @@ fun trafficLight() {
         )
     )
     val constants = listOf<Constant>()
-    val stateMachines = Analyzer(variables, constants).buildStateMachines(className, jarFile)
+    val stateMachines = Analyzer(jarFile, className, variables, constants).buildStateMachines()
 
     val model = NuXmvModelBuilder(
         variables,
@@ -88,7 +88,7 @@ fun atm() {
         )
     )
     val constants = listOf<Constant>()
-    val stateMachines = Analyzer(variables, constants).buildStateMachines(className, jarFile)
+    val stateMachines = Analyzer(jarFile, className, variables, constants).buildStateMachines()
 
     val model = NuXmvModelBuilder(
         variables,
@@ -156,7 +156,7 @@ fun lock() {
             StmtValue(intValue=3)
         )
     )
-    val stateMachines = Analyzer(variables, constants).buildStateMachines(className, jarFile)
+    val stateMachines = Analyzer(jarFile, className, variables, constants).buildStateMachines()
 
     val model = NuXmvModelBuilder(
         variables,

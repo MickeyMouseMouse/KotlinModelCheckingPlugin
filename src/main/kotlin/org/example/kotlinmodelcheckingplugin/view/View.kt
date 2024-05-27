@@ -31,7 +31,7 @@ class View(
         ctlFormulas: List<String>
     ) {
         this.title = "${ctrl.className} - Model Checking"
-        this.setSize(650, 600)
+        this.setSize(600, 800)
         setLocationRelativeTo(null)
 
         val rootPanel = JPanel()
@@ -39,15 +39,14 @@ class View(
         val rootLayout = GridBagLayout()
         rootLayout.columnWeights = doubleArrayOf(1.0)
         rootLayout.rowWeights = doubleArrayOf(
-            1.0, // vars
-            1.0, // ltl
-            1.0, // ctl
-            3.0, // model checking result
-            0.5, // progress bar
-            1.0 // action buttons
+            0.1, // vars
+            0.1, // ltl
+            0.1, // ctl
+            0.5, // model checking result
+            0.1, // progress bar
+            0.1 // action buttons
         )
         val constraints = GridBagConstraints()
-        constraints.insets = JBUI.insetsBottom(10)
         constraints.fill = GridBagConstraints.BOTH
         rootPanel.layout = rootLayout
 
@@ -71,6 +70,7 @@ class View(
         val varsScrollPane = JBScrollPane(varsTable)
         constraints.gridx = 0
         constraints.gridy = 0
+        constraints.insets = JBUI.insetsBottom(5)
         rootPanel.add(varsScrollPane, constraints)
 
         val ltlTableModel = CustomTableModel()
@@ -98,10 +98,12 @@ class View(
         val resultScrollPane = JBScrollPane(ctrl.resultTextArea)
         constraints.gridx = 0
         constraints.gridy = 3
+        constraints.insets = JBUI.insetsTop(20)
         rootPanel.add(resultScrollPane, constraints)
 
         constraints.gridx = 0
         constraints.gridy = 4
+        constraints.insets = JBUI.emptyInsets()
         rootPanel.add(ctrl.progressBar, constraints)
 
         val actionBtnPanel = JPanel()
@@ -115,7 +117,6 @@ class View(
         bottomPanel.add(actionBtnPanel)
         constraints.gridx = 0
         constraints.gridy = 5
-        constraints.insets = JBUI.emptyInsets()
         rootPanel.add(bottomPanel, constraints)
 
         contentPane.add(rootPanel)
