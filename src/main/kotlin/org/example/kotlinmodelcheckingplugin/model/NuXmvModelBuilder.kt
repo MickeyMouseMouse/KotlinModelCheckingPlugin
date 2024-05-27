@@ -8,7 +8,6 @@ import org.example.kotlinmodelcheckingplugin.model.state_machine.StateMachine
  */
 class NuXmvModelBuilder(
     private val variables: List<Variable>,
-    private val constants: List<Constant>,
     private val stateMachines: List<StateMachine>,
     private val ltlFormulas: List<String>,
     private val ctlFormulas: List<String>
@@ -21,7 +20,6 @@ class NuXmvModelBuilder(
     fun getModel(): String {
         val model = StringBuilder()
         model.append("MODULE main\n")
-            .append(getDefineBlock())
             .append(getVarBlock())
             .append("ASSIGN\n")
                 .append(getInitBlock())
@@ -31,19 +29,6 @@ class NuXmvModelBuilder(
             .append(getSpecsBlock())
 
         return model.toString()
-    }
-
-    /**
-     * Declaring constants
-     */
-    private fun getDefineBlock(): StringBuilder {
-        if (constants.isEmpty()) return StringBuilder()
-
-        val result = StringBuilder("DEFINE\n")
-        for (constant in constants) {
-            result.append("${tab}${constant.name} := ${constant.value.getValue()};\n")
-        }
-        return result
     }
 
     /**
@@ -69,7 +54,7 @@ class NuXmvModelBuilder(
                 StmtType.BOOL -> {
                     result.append("boolean;\n")
                 }
-                StmtType.UNKNOWN -> {}
+                StmtType.VOID -> {}
             }
         }
         return result
@@ -92,7 +77,7 @@ class NuXmvModelBuilder(
                 StmtType.BOOL -> {
                     result.append("${variable.initValue.boolValue.toString().uppercase()};\n")
                 }
-                StmtType.UNKNOWN -> {}
+                StmtType.VOID -> {}
             }
         }
         return result
@@ -128,7 +113,7 @@ class NuXmvModelBuilder(
                         StmtType.INT -> transitionDescription.append(vertex.intValue)
                         StmtType.DOUBLE -> transitionDescription.append(vertex.doubleValue)
                         StmtType.BOOL -> transitionDescription.append(vertex.boolValue.toString().uppercase())
-                        StmtType.UNKNOWN -> {}
+                        StmtType.VOID -> {}
                     }
 
                     if (i != transition.targetIds.indices.last) transitionDescription.append(", ")
@@ -158,7 +143,7 @@ class NuXmvModelBuilder(
                     conditionDescription.append("${variable.name} = ${variable.value.boolValue.toString().uppercase()}")
                 }
                 StmtType.DOUBLE -> {}
-                StmtType.UNKNOWN -> {}
+                StmtType.VOID -> {}
             }
             if (i != conditionList.indices.last) conditionDescription.append(" & ")
         }

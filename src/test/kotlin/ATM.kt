@@ -13,7 +13,7 @@ class ATM {
 
     fun main() {
         for (i in 0..5) {
-            next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = false)
+            next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = true)
         }
         //next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = true)
         //next(pinAttempt1 = false, pinAttempt2 = true, pinAttempt3 = false, amountCheck = true)

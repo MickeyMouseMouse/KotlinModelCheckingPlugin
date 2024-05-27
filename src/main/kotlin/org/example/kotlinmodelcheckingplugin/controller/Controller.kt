@@ -51,7 +51,6 @@ class Controller(
 
                     val model = NuXmvModelBuilder(
                         allVariables,
-                        constants,
                         stateMachines,
                         ltlFormulas,
                         ctlFormulas

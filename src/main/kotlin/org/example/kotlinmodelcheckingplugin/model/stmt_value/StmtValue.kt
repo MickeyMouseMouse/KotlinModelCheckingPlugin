@@ -6,40 +6,44 @@ data class StmtValue(
     var doubleValue: Double?,
     var boolValue: Boolean?
 ) {
-    constructor() : this(
-        StmtType.UNKNOWN,
+    constructor(type: StmtType) : this(
+        type = type,
         intValue = null,
         doubleValue = null,
         boolValue = null
     )
 
     constructor(type: StmtType? = null, intValue: Int?) : this(
-        type = type ?: if (intValue == null) StmtType.UNKNOWN else StmtType.INT,
+        type = type ?: if (intValue == null) StmtType.VOID else StmtType.INT,
         intValue = intValue,
         doubleValue = null,
         boolValue = null
     )
 
     constructor(type: StmtType? = null, doubleValue: Double?) : this(
-        type = type ?: if (doubleValue == null) StmtType.UNKNOWN else StmtType.DOUBLE,
+        type = type ?: if (doubleValue == null) StmtType.VOID else StmtType.DOUBLE,
         intValue = null,
         doubleValue = doubleValue,
         boolValue = null
     )
 
     constructor(type: StmtType? = null, boolValue: Boolean?) : this(
-        type = type ?: if (boolValue == null) StmtType.UNKNOWN else StmtType.BOOL,
+        type = type ?: if (boolValue == null) StmtType.VOID else StmtType.BOOL,
         intValue = null,
         doubleValue = null,
         boolValue = boolValue
     )
+
+    fun isInitialized(): Boolean {
+        return intValue != null || doubleValue != null || boolValue != null
+    }
 
     fun getValue(): Any? {
         return when (type) {
             StmtType.INT -> intValue
             StmtType.DOUBLE -> doubleValue
             StmtType.BOOL -> boolValue
-            StmtType.UNKNOWN -> null
+            StmtType.VOID -> null
         }
     }
 }

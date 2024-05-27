@@ -33,5 +33,6 @@ ASSIGN
         TRUE : FALSE;
     esac;
 
+
 LTLSPEC
 G (!(red = TRUE & yellow = TRUE & green = TRUE))

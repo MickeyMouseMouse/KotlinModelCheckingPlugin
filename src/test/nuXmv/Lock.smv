@@ -1,8 +1,4 @@
 MODULE main
-DEFINE
-	secret1 := 1;
-	secret2 := 2;
-	secret3 := 3;
 VAR
     value1: 0..9;
     value2: 0..9;
@@ -13,5 +9,27 @@ ASSIGN
     init(value1) := 0;
     init(value1) := 0;
     init(isOpen) := FALSE;
-	
-	
+
+    next(value1) := case
+        value1 = 0 & value2 = 0 & value3 = 0 : 1;
+        TRUE : value1;
+    esac;
+
+    next(value2) := case
+        value1 = 1 & value2 = 0 & value3 = 0 : 2;
+        TRUE : value2;
+    esac;
+
+    next(value3) := case
+        value1 = 1 & value2 = 2 & value3 = 0 : 3;
+        TRUE : value3;
+    esac;
+
+    next(isOpen) := case
+        value1 = 1 & value2 = 2 & value3 = 3 : TRUE;
+        TRUE : isOpen;
+    esac;
+
+
+LTLSPEC
+G ((value1 != 1 & value1 != 2 & value3 != 3) -> X(isOpen = FALSE))

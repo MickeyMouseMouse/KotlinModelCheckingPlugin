@@ -32,58 +32,24 @@ class Analyzer(
     private val constants: List<Constant>
 ) {
     private lateinit var view: JavaView
-    val stateMachines = mutableListOf<StateMachine>()
+    private val stateMachines = mutableListOf<StateMachine>()
 
     /**
-     * Analyse Jimple IR to retrieve finite state machines for variables
+     * The method retrieves finite state machines for variables
      */
     fun buildStateMachines(className: String, jarFile: File): List<StateMachine> {
         val inputLocation = JavaClassPathAnalysisInputLocation(jarFile.absolutePath)
         view = JavaView(inputLocation)
         val classType = view.identifierFactory.getClassType(className)
-        val sootClass = view.getClass(classType).get()
 
-        // get the initial values of variables from constructor
-        for (method in sootClass.methods) {
-            if (method.name == "<init>") {
-                for (stmt in method.body.stmts) {
-                    if (stmt is JAssignStmt) {
-                        try {
-                            val varName = stmt.fieldRef.fieldSignature.name // can throw RuntimeException
-                            for (variable in variables) {
-                                if (variable.name == varName) {
-                                    when (variable.value.type) {
-                                        StmtType.INT -> {
-                                            variable.initValue.intValue = stmt.uses[1].toString().toInt()
-                                            variable.value.intValue = stmt.uses[1].toString().toInt()
-                                        }
-                                        StmtType.DOUBLE -> {
-                                            variable.initValue.doubleValue = stmt.uses[1].toString().toDouble()
-                                            variable.value.doubleValue = stmt.uses[1].toString().toDouble()
-                                        }
-                                        StmtType.BOOL -> {
-                                            variable.initValue.boolValue = stmt.uses[1].toString().toBoolean()
-                                            variable.value.boolValue = stmt.uses[1].toString().toBoolean()
-                                        }
-                                        StmtType.UNKNOWN -> {}
-                                    }
-                                    break
-                                }
-                            }
-                        } catch (_: RuntimeException) {
-                        }
-                    }
-                }
-            }
-        }
+        // class constructor
+        analyzeMethod(
+            view.identifierFactory.getMethodSignature(classType, "<init>", "void", listOf()),
+            listOf()
+        )
 
-        // create finite state machines
-        for (variable in variables) {
-            stateMachines.add(StateMachine(variable))
-        }
-
-        // start the analysis with the 'main()' function (entry point)
-        analyseMethod(
+        // main() function
+        analyzeMethod(
             view.identifierFactory.getMethodSignature(classType, "main", "void", listOf()),
             listOf()
         )
@@ -93,14 +59,176 @@ class Analyzer(
     /**
      *
      */
-    private fun getStateVariables(): List<Variable> {
-        val condition = mutableListOf<Variable>()
-        for (variable in variables) {
-            if (variable.isState) {
-                condition.add(variable.copy())
+    private fun analyzeMethod(methodSignature: MethodSignature, args: List<Variable>): StmtValue {
+        val methodOptional = view.getMethod(methodSignature)
+        if (!methodOptional.isPresent) return StmtValue(type=StmtType.VOID)
+        val method = methodOptional.get()
+        val localVariables = mutableListOf<Variable>()
+        var stmt = method.body.stmts[0]
+        while (stmt !is JReturnVoidStmt) {
+            when (stmt) {
+                is JIdentityStmt -> {  // parsing the passed arguments
+                    val (argName, argType) = stmt.rightOp.toString().split(": ")
+                    for (arg in args) {
+                        if (arg.name == argName) {
+                            when (argType) {
+                                "int" -> {
+                                    localVariables.add(Variable(
+                                        stmt.leftOp.name,
+                                        StmtValue(type=StmtType.INT),
+                                        StmtValue(intValue = arg.value.intValue),
+                                        false
+                                    ))
+                                }
+                                "double" -> {
+                                    localVariables.add(Variable(
+                                        stmt.leftOp.name,
+                                        StmtValue(type=StmtType.DOUBLE),
+                                        StmtValue(doubleValue = arg.value.doubleValue),
+                                        false
+                                    ))
+                                }
+                                "boolean" -> {
+                                    localVariables.add(Variable(
+                                        stmt.leftOp.name,
+                                        StmtValue(type=StmtType.BOOL),
+                                        StmtValue(boolValue = arg.value.intValue != 0),
+                                        false
+                                    ))
+                                }
+                            }
+                        }
+                    }
+                }
+                is JAssignStmt -> {
+                    val result = calculate(stmt.rightOp, localVariables)
+                    when (stmt.leftOp) {
+                        is JInstanceFieldRef -> { // class field
+                            val varSignature = (stmt.leftOp as JInstanceFieldRef).fieldSignature
+                            for (variable in variables) {
+                                if (variable.name == varSignature.name) {
+                                    if (variable.initValue.isInitialized()) {
+                                        if (stateMachines.none { it.varName == variable.name }) {
+                                            stateMachines.add(StateMachine(variable))
+                                        }
+                                    } else {  // not initialized
+                                        when (variable.value.type) {
+                                            StmtType.INT -> {
+                                                variable.initValue.intValue = result.intValue
+                                                variable.value.intValue = variable.initValue.intValue
+                                            }
+                                            StmtType.DOUBLE -> {
+                                                variable.initValue.doubleValue = result.doubleValue
+                                                variable.value.doubleValue = variable.initValue.doubleValue
+                                            }
+                                            StmtType.BOOL -> {
+                                                variable.initValue.boolValue = result.intValue != 0
+                                                variable.value.boolValue = variable.initValue.boolValue
+                                            }
+                                            StmtType.VOID -> {
+
+                                            }
+                                        }
+                                        stateMachines.add(StateMachine(variable))
+                                        break
+                                    }
+
+                                    when (varSignature.type) {
+                                        PrimitiveType.getInt() -> {
+                                            val newValue = result.getValue() as Int
+                                            if (newValue == variable.value.intValue) break
+
+                                            stateMachines.filter { it.varName == variable.name }[0].addNextState(
+                                                StmtValue(intValue = newValue),
+                                                getStateVariables()
+                                            )
+                                            variable.value.intValue = newValue
+                                        }
+                                        PrimitiveType.getBoolean() -> {
+                                            val newValue = (result.getValue() as Int) == 1
+                                            if (newValue == variable.value.boolValue) break
+
+                                            stateMachines.filter { it.varName == variable.name }[0].addNextState(
+                                                StmtValue(boolValue = newValue),
+                                                getStateVariables()
+                                            )
+                                            variable.value.boolValue = newValue
+                                        }
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                        is JavaLocal -> { // method local variable
+                            var exists = false
+                            for (variable in localVariables) {
+                                if (variable.name == (stmt.leftOp as JavaLocal).name) {
+                                    exists = true
+                                    variable.value = result
+                                    break
+                                }
+                            }
+                            if (!exists) localVariables.add(
+                                Variable(
+                                    (stmt.leftOp as JavaLocal).name,
+                                    StmtValue(type=result.type),
+                                    result,
+                                    false
+                                )
+                            )
+                        }
+                    }
+                }
+                is JInvokeStmt -> { // call another method
+                    // prepare arguments
+                    val funArgs = mutableListOf<Variable>()
+                    for (i in stmt.invokeExpr.args.indices) {
+                        val argValue = calculate(stmt.invokeExpr.args[i], localVariables)
+                        funArgs.add(Variable("@parameter${i}", StmtValue(type=argValue.type), argValue, false))
+                    }
+
+                    analyzeMethod(stmt.invokeExpr.methodSignature, funArgs)
+                }
+                is JReturnStmt -> {
+                    return calculate(stmt.op, localVariables)
+                }
+            }
+
+            stmt = when (stmt) { // get next stmt
+                is JIfStmt -> {
+                    if  (calculate(stmt.condition, localVariables).getValue() as Boolean)
+                        stmt.getTargetStmts(method.body)[0]
+                    else
+                        method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
+                }
+                is JSwitchStmt -> {
+                    lateinit var nextStmt: Stmt
+                    for (variable in localVariables) {
+                        if (variable.name == (stmt.key as JavaLocal).name) {
+                            when (variable.value.type) {
+                                StmtType.INT -> {
+                                    for (i in 0..<stmt.values.size) {
+                                        if ((variable.value.getValue() as Int) == stmt.values[i].value) {
+                                            nextStmt = stmt.getTargetStmts(method.body)[i]
+                                            break
+                                        }
+                                    }
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                    nextStmt
+                }
+                is JGotoStmt -> {
+                    stmt.getTargetStmts(method.body)[0]
+                }
+                else -> { // JAssignStmt, JInvokeStmt and so on
+                    method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
+                }
             }
         }
-        return condition
+        return StmtValue(type=StmtType.VOID)
     }
 
     /**
@@ -131,7 +259,7 @@ class Analyzer(
                             StmtType.BOOL -> {
                                 result = StmtValue(boolValue=variable.value.boolValue)
                             }
-                            StmtType.UNKNOWN -> {}
+                            StmtType.VOID -> {}
                         }
                         break
                     }
@@ -149,7 +277,7 @@ class Analyzer(
                                 StmtType.BOOL -> {
                                     result = StmtValue(boolValue=constant.value.boolValue)
                                 }
-                                StmtType.UNKNOWN -> {}
+                                StmtType.VOID -> {}
                             }
                             break
                         }
@@ -169,7 +297,7 @@ class Analyzer(
                             StmtType.BOOL -> {
                                 result = StmtValue(boolValue = variable.value.boolValue)
                             }
-                            StmtType.UNKNOWN -> {}
+                            StmtType.VOID -> {}
                         }
                         break
                     }
@@ -264,9 +392,9 @@ class Analyzer(
                 val funArgs = mutableListOf<Variable>()
                 for (i in value.args.indices) {
                     val argValue = calculate(value.args[i], localVariables)
-                    funArgs.add(Variable("@parameter${i}", StmtValue(), argValue, false))
+                    funArgs.add(Variable("@parameter${i}", StmtValue(argValue.type), argValue, false))
                 }
-                result = analyseMethod(value.methodSignature, funArgs)
+                result = analyzeMethod(value.methodSignature, funArgs)
             }
         }
 
@@ -278,143 +406,13 @@ class Analyzer(
     /**
      *
      */
-    private fun analyseMethod(methodSignature: MethodSignature, args: List<Variable>): StmtValue {
-        val method = view.getMethod(methodSignature).get()
-        val localVariables = mutableListOf<Variable>()
-        var stmt = method.body.stmts[0]
-        while (stmt !is JReturnVoidStmt) {
-            when (stmt) {
-                is JIdentityStmt -> {  // parsing arguments
-                    val (argName, argType) = stmt.rightOp.toString().split(": ")
-                    for (arg in args) {
-                        if (arg.name == argName) {
-                            when (argType) {
-                                "int" -> {
-                                    localVariables.add(Variable(
-                                        stmt.leftOp.name,
-                                        StmtValue(),
-                                        StmtValue(intValue = arg.value.intValue),
-                                        false
-                                    ))
-                                }
-                                "double" -> {
-                                    localVariables.add(Variable(
-                                        stmt.leftOp.name,
-                                        StmtValue(),
-                                        StmtValue(doubleValue = arg.value.doubleValue),
-                                        false
-                                    ))
-                                }
-                                "boolean" -> {
-                                    localVariables.add(Variable(
-                                        stmt.leftOp.name,
-                                        StmtValue(),
-                                        StmtValue(boolValue = arg.value.intValue != 0),
-                                        false
-                                    ))
-                                }
-                            }
-                        }
-                    }
-                }
-                is JAssignStmt -> {
-                    val result = calculate(stmt.rightOp, localVariables)
-                    when (stmt.leftOp) {
-                        is JInstanceFieldRef -> {
-                            val varSignature = (stmt.leftOp as JInstanceFieldRef).fieldSignature
-                            for (variable in variables) {
-                                if (variable.name == varSignature.name) {
-                                    when (varSignature.type) {
-                                        PrimitiveType.getInt() -> {
-                                            val newValue = result.getValue() as Int
-                                            stateMachines.filter { it.varName == variable.name }[0].addNextState(
-                                                StmtValue(intValue = newValue),
-                                                getStateVariables()
-                                            )
-                                            variable.value.intValue = newValue
-                                        }
-                                        PrimitiveType.getBoolean() -> {
-                                            val newValue = (result.getValue() as Int) == 1
-                                            stateMachines.filter { it.varName == variable.name }[0].addNextState(
-                                                StmtValue(boolValue = newValue),
-                                                getStateVariables()
-                                            )
-                                            variable.value.boolValue = newValue
-                                        }
-                                    }
-                                    break
-                                }
-                            }
-                        }
-                        is JavaLocal -> {
-                            var exists = false
-                            for (variable in localVariables) {
-                                if (variable.name == (stmt.leftOp as JavaLocal).name) {
-                                    exists = true
-                                    variable.value = result
-                                    break
-                                }
-                            }
-                            if (!exists) localVariables.add(
-                                Variable(
-                                    (stmt.leftOp as JavaLocal).name,
-                                    StmtValue(),
-                                    result,
-                                    false
-                                )
-                            )
-                        }
-                    }
-                }
-                is JInvokeStmt -> { // call another function
-                    // prepare arguments
-                    val funArgs = mutableListOf<Variable>()
-                    for (i in stmt.invokeExpr.args.indices) {
-                        val argValue = calculate(stmt.invokeExpr.args[i], localVariables)
-                        funArgs.add(Variable("@parameter${i}", StmtValue(), argValue, false))
-                    }
-
-                    analyseMethod(stmt.invokeExpr.methodSignature, funArgs)
-                }
-                is JReturnStmt -> {
-                    return calculate(stmt.op, localVariables)
-                }
-            }
-
-            stmt = when (stmt) { // get next stmt
-                is JIfStmt -> {
-                    if  (calculate(stmt.condition, localVariables).getValue() as Boolean)
-                        stmt.getTargetStmts(method.body)[0]
-                    else
-                        method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
-                }
-                is JSwitchStmt -> {
-                    lateinit var nextStmt: Stmt
-                    for (variable in localVariables) {
-                        if (variable.name == (stmt.key as JavaLocal).name) {
-                            when (variable.value.type) {
-                                StmtType.INT -> {
-                                    for (i in 0..<stmt.values.size) {
-                                        if ((variable.value.getValue() as Int) == stmt.values[i].value) {
-                                            nextStmt = stmt.getTargetStmts(method.body)[i]
-                                            break
-                                        }
-                                    }
-                                }
-                                else -> {}
-                            }
-                        }
-                    }
-                    nextStmt
-                }
-                is JGotoStmt -> {
-                    stmt.getTargetStmts(method.body)[0]
-                }
-                else -> { // JAssignStmt, JInvokeStmt and so on
-                    method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
-                }
+    private fun getStateVariables(): List<Variable> {
+        val condition = mutableListOf<Variable>()
+        for (variable in variables) {
+            if (variable.isState) {
+                condition.add(variable.copy())
             }
         }
-        return StmtValue()
+        return condition
     }
 }

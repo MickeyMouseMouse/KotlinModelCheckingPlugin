@@ -8,8 +8,8 @@ import java.io.File
 
 // for debug
 fun main() {
-    trafficLight()
-    atm()
+    //trafficLight()
+    //atm()
     lock()
 }
 
@@ -27,14 +27,14 @@ fun trafficLight() {
     val variables = listOf(
         Variable(
             "mode",
-            StmtValue(intValue=0),
-            StmtValue(intValue=0),
+            StmtValue(type=StmtType.INT), // intValue=0
+            StmtValue(type=StmtType.INT), // intValue=0
             true
         ),
         Variable(
             "red",
-            StmtValue(boolValue=false),
-            StmtValue(boolValue=false),
+            StmtValue(boolValue=false), // boolValue=false
+            StmtValue(boolValue=false), // boolValue=false
             false
         ),
         Variable(
@@ -55,15 +55,15 @@ fun trafficLight() {
 
     val model = NuXmvModelBuilder(
         variables,
-        constants,
         stateMachines,
         listOf( // ltl
             "G (!(red = TRUE & yellow = TRUE & green = TRUE))"
         ),
         listOf( // ctl
-            "AG mode < 10"
+            "AG mode < 5"
         )
     ).getModel()
+    print(model)
     print(Tools.runModelChecker(className, model).second)
 }
 
@@ -92,7 +92,6 @@ fun atm() {
 
     val model = NuXmvModelBuilder(
         variables,
-        constants,
         stateMachines,
         listOf( // ltl
             "G ((mode=0) -> X(mode!=5))"
@@ -101,6 +100,7 @@ fun atm() {
 
         )
     ).getModel()
+    print(model)
     print(Tools.runModelChecker(className, model).second)
 }
 
@@ -160,7 +160,6 @@ fun lock() {
 
     val model = NuXmvModelBuilder(
         variables,
-        constants,
         stateMachines,
         listOf( // ltl
             "G ((value1 != 1 & value1 != 2 & value3 != 3) -> X(isOpen = FALSE))"
@@ -169,5 +168,6 @@ fun lock() {
 
         )
     ).getModel()
+    print(model)
     print(Tools.runModelChecker(className, model).second)
 }
