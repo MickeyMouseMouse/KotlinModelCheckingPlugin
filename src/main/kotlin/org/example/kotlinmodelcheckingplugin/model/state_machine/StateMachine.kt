@@ -13,6 +13,9 @@ class StateMachine(variable: Variable) {
         headIndex = 0
     }
 
+    /**
+     * Add a new vertex (the next state) in the state machine
+     */
     fun addNextState(value: StmtValue, conditions: List<Variable>) {
         var exists = false
         for (i in 0..< vertices.size) {

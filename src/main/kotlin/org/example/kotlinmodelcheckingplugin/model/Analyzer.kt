@@ -62,7 +62,7 @@ class Analyzer(
     }
 
     /**
-     *
+     * This function parses Jimple IR of the program and generate finite state machines for the variables.
      */
     private fun analyzeMethod(methodSignature: MethodSignature, args: List<Variable>): StmtValue {
         val methodOptional = view.getMethod(methodSignature)
@@ -238,7 +238,10 @@ class Analyzer(
     }
 
     /**
-     *
+     * This function calculates the result (StmtValue) of various values, for example:
+     * 1) 2 + 3
+     * 2) some_var % 5
+     * 3) some_fun() / 5.3 < some_var
      */
     private fun calculate(value: Value, localVariables: List<Variable>): StmtValue {
         var result : StmtValue? = null
@@ -410,7 +413,7 @@ class Analyzer(
     }
 
     /**
-     *
+     * Retrieve the current values of state variables (transition condition of a state machine)
      */
     private fun getStateVariables(): List<Variable> {
         val condition = mutableListOf<Variable>()
