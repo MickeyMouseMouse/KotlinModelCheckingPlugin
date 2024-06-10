@@ -1,0 +1,70 @@
+MODULE main
+VAR
+	ph_0 : process philosopher (0, n, states, forks);
+	ph_1 : process philosopher (1, n, states, forks);
+	ph_2 : process philosopher (2, n, states, forks);
+	ph_3 : process philosopher (3, n, states, forks);
+	ph_4 : process philosopher (4, n, states, forks);
+	states : array 0 .. 4 of {THINKING, HUNGRY, LEFTFORK, EATING, RIGHTFORK, FULL};
+	forks: array 0 .. 4 of {FREE, BUSY};
+ASSIGN
+	init (forks[0]) := FREE;
+	init (forks[1]) := FREE;
+	init (forks[2]) := FREE;
+	init (forks[3]) := FREE;
+	init (forks[4]) := FREE;
+DEFINE
+	n := 5;
+
+MODULE philosopher (i, n, states, forks)
+DEFINE
+	left := i;
+	right := (i + 1) mod n;
+	state := states[i];
+ASSIGN
+	init(states[i]) := THINKING;
+	next(states[i]) := case
+		state = THINKING : {THINKING, HUNGRY};
+		(state = HUNGRY) & (forks[left] = FREE) : LEFTFORK;
+		(state = LEFTFORK) & (forks[right] = FREE) : EATING;
+		state = EATING : {EATING, FULL};
+		state = FULL : RIGHTFORK;
+		state = RIGHTFORK : THINKING;
+		TRUE : state;
+	esac;
+
+    next(forks[left]) := case
+        (state = HUNGRY) & (forks[left] = FREE) : BUSY;
+        state = FULL : FREE;
+        TRUE : forks[left];
+    esac;
+
+    next(forks[right]) := case
+        (state = LEFTFORK) & (forks[right] = FREE) : BUSY;
+        state = RIGHTFORK : FREE;
+        TRUE : forks[right];
+    esac;
+FAIRNESS
+	running
+
+
+LTLSPEC -- отсутствие дедлока
+!F G (
+	((states[0]=HUNGRY) | (states[0]=LEFTFORK)) &
+	((states[1]=HUNGRY) | (states[1]=LEFTFORK)) & 
+	((states[2]=HUNGRY) | (states[2]=LEFTFORK)) &
+	((states[3]=HUNGRY) | (states[3]=LEFTFORK)) & 
+	((states[4]=HUNGRY) | (states[4]=LEFTFORK))
+)
+
+--CTLSPEC -- едят двумя вилками (соседние философы не могут есть одновременно)
+--(AG ((states[0]=EATING -> ( states[4]!=EATING & states[1]!=EATING)) &
+--(states[1]=EATING -> ( states[0]!=EATING & states[2]!=EATING)) &
+--(states[2]=EATING -> ( states[1]!=EATING & states[3]!=EATING)) &
+--(states[3]=EATING -> ( states[2]!=EATING & states[4]!=EATING)) &
+--(states[4]=EATING -> ( states[3]!=EATING & states[0]!=EATING)) ))
+
+--CTLSPEC -- могут есть одновременно
+--(AG ((EF (states[0]=EATING&states[2]=EATING))&
+--(EF (states[1]=EATING&states[3]=EATING)) & (EF (states[2]=EATING&states[4]=EATING)) &
+--(EF (states[3]=EATING&states[0]=EATING)) & (EF (states[4]=EATING&states[1]=EATING))))

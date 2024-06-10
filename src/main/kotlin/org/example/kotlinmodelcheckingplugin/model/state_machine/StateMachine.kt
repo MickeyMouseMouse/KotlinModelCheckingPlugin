@@ -3,6 +3,10 @@ package org.example.kotlinmodelcheckingplugin.model.state_machine
 import org.example.kotlinmodelcheckingplugin.model.stmt_value.*
 
 class StateMachine(variable: Variable) {
+    companion object {
+        val appropriateTypes = listOf(StmtType.INT, StmtType.BOOL)
+    }
+
     val varName: String = variable.name
     val vertices = mutableListOf<StmtValue>()
     val edges = mutableListOf<Edge>()

@@ -6,6 +6,7 @@ import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.constant.BooleanConstant
 import sootup.core.jimple.common.constant.DoubleConstant
 import sootup.core.jimple.common.constant.IntConstant
+import sootup.core.jimple.common.constant.StringConstant
 import sootup.core.jimple.common.expr.*
 import sootup.core.jimple.common.ref.JInstanceFieldRef
 import sootup.core.jimple.common.stmt.JAssignStmt
@@ -71,7 +72,7 @@ class Analyzer(
         val method = methodOptional.get()
         val localVariables = mutableListOf<Variable>()
         var stmt = method.body.stmts[0]
-        while (stmt !is JReturnVoidStmt) {
+        while (true) {
             when (stmt) {
                 is JIdentityStmt -> {  // parsing the passed arguments
                     val (argName, argType) = stmt.rightOp.toString().split(": ")
@@ -79,33 +80,55 @@ class Analyzer(
                         if (arg.name == argName) {
                             when (argType) {
                                 "int" -> {
-                                    localVariables.add(Variable(
-                                        stmt.leftOp.name,
-                                        StmtValue(type=StmtType.INT),
-                                        StmtValue(intValue = arg.value.intValue),
-                                        false
-                                    ))
+                                    localVariables.add(
+                                        Variable(
+                                            stmt.leftOp.name,
+                                            StmtValue(type = StmtType.INT),
+                                            StmtValue(intValue = arg.value.intValue),
+                                            false
+                                        )
+                                    )
                                 }
+
                                 "double" -> {
-                                    localVariables.add(Variable(
-                                        stmt.leftOp.name,
-                                        StmtValue(type=StmtType.DOUBLE),
-                                        StmtValue(doubleValue = arg.value.doubleValue),
-                                        false
-                                    ))
+                                    localVariables.add(
+                                        Variable(
+                                            stmt.leftOp.name,
+                                            StmtValue(type = StmtType.DOUBLE),
+                                            StmtValue(doubleValue = arg.value.doubleValue),
+                                            false
+                                        )
+                                    )
                                 }
+
                                 "boolean" -> {
-                                    localVariables.add(Variable(
-                                        stmt.leftOp.name,
-                                        StmtValue(type=StmtType.BOOL),
-                                        StmtValue(boolValue = arg.value.intValue != 0),
-                                        false
-                                    ))
+                                    localVariables.add(
+                                        Variable(
+                                            stmt.leftOp.name,
+                                            StmtValue(type = StmtType.BOOL),
+                                            StmtValue(boolValue = arg.value.intValue != 0),
+                                            false
+                                        )
+                                    )
                                 }
+
+                                "java.lang.String" -> {
+                                    localVariables.add(
+                                        Variable(
+                                            stmt.leftOp.name,
+                                            StmtValue(type = StmtType.STRING),
+                                            StmtValue(stringValue = arg.value.stringValue),
+                                            false
+                                        )
+                                    )
+                                }
+
+                                else -> {}
                             }
                         }
                     }
                 }
+
                 is JAssignStmt -> {
                     val result = calculate(stmt.rightOp, localVariables)
                     when (stmt.leftOp) {
@@ -113,6 +136,11 @@ class Analyzer(
                             val varSignature = (stmt.leftOp as JInstanceFieldRef).fieldSignature
                             for (variable in variables) {
                                 if (variable.name == varSignature.name) {
+                                    if (!StateMachine.appropriateTypes.contains(variable.value.type)) {
+                                        // we form state machines only for appropriate data types
+                                        continue
+                                    }
+
                                     if (variable.initValue.isInitialized()) {
                                         if (stateMachines.none { it.varName == variable.name }) {
                                             stateMachines.add(StateMachine(variable))
@@ -123,17 +151,18 @@ class Analyzer(
                                                 variable.initValue.intValue = result.intValue
                                                 variable.value.intValue = variable.initValue.intValue
                                             }
+
                                             StmtType.DOUBLE -> {
                                                 variable.initValue.doubleValue = result.doubleValue
                                                 variable.value.doubleValue = variable.initValue.doubleValue
                                             }
+
                                             StmtType.BOOL -> {
                                                 variable.initValue.boolValue = result.intValue != 0
                                                 variable.value.boolValue = variable.initValue.boolValue
                                             }
-                                            StmtType.VOID -> {
 
-                                            }
+                                            else -> {}
                                         }
                                         stateMachines.add(StateMachine(variable))
                                         break
@@ -150,6 +179,7 @@ class Analyzer(
                                             )
                                             variable.value.intValue = newValue
                                         }
+
                                         PrimitiveType.getBoolean() -> {
                                             val newValue = (result.getValue() as Int) == 1
                                             if (newValue == variable.value.boolValue) break
@@ -165,6 +195,7 @@ class Analyzer(
                                 }
                             }
                         }
+
                         is JavaLocal -> { // method local variable
                             var exists = false
                             for (variable in localVariables) {
@@ -177,7 +208,7 @@ class Analyzer(
                             if (!exists) localVariables.add(
                                 Variable(
                                     (stmt.leftOp as JavaLocal).name,
-                                    StmtValue(type=result.type),
+                                    StmtValue(type = result.type),
                                     result,
                                     false
                                 )
@@ -185,28 +216,35 @@ class Analyzer(
                         }
                     }
                 }
+
                 is JInvokeStmt -> { // call another method
                     // prepare arguments
                     val funArgs = mutableListOf<Variable>()
                     for (i in stmt.invokeExpr.args.indices) {
                         val argValue = calculate(stmt.invokeExpr.args[i], localVariables)
-                        funArgs.add(Variable("@parameter${i}", StmtValue(type=argValue.type), argValue, false))
+                        funArgs.add(Variable("@parameter${i}", StmtValue(type = argValue.type), argValue, false))
                     }
 
                     analyzeMethod(stmt.invokeExpr.methodSignature, funArgs)
                 }
+
                 is JReturnStmt -> {
                     return calculate(stmt.op, localVariables)
+                }
+
+                is JReturnVoidStmt -> {
+                    return StmtValue(type=StmtType.VOID)
                 }
             }
 
             stmt = when (stmt) { // get the next stmt
                 is JIfStmt -> {
-                    if  (calculate(stmt.condition, localVariables).getValue() as Boolean)
+                    if (calculate(stmt.condition, localVariables).getValue() as Boolean)
                         stmt.getTargetStmts(method.body)[0]
                     else
                         method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
                 }
+
                 is JSwitchStmt -> {
                     lateinit var nextStmt: Stmt
                     for (variable in localVariables) {
@@ -220,21 +258,23 @@ class Analyzer(
                                         }
                                     }
                                 }
+
                                 else -> {}
                             }
                         }
                     }
                     nextStmt
                 }
+
                 is JGotoStmt -> {
                     stmt.getTargetStmts(method.body)[0]
                 }
+
                 else -> { // JAssignStmt, JInvokeStmt and so on
                     method.body.stmts[method.body.stmts.indexOf(stmt) + 1]
                 }
             }
         }
-        return StmtValue(type=StmtType.VOID)
     }
 
     /**
@@ -247,13 +287,16 @@ class Analyzer(
         var result : StmtValue? = null
         when (value) {
             is IntConstant -> {
-                result = StmtValue(intValue = value.toString().toInt())
+                result = StmtValue(intValue = value.value)
             }
             is DoubleConstant -> {
-                result = StmtValue(doubleValue = value.toString().toDouble())
+                result = StmtValue(doubleValue = value.value)
             }
             is BooleanConstant -> {
                 result = StmtValue(boolValue = value.toString().toBoolean())
+            }
+            is StringConstant -> {
+                result = StmtValue(stringValue = value.value)
             }
             is JInstanceFieldRef -> {
                 for (variable in variables) {
@@ -268,7 +311,10 @@ class Analyzer(
                             StmtType.BOOL -> {
                                 result = StmtValue(boolValue=variable.value.boolValue)
                             }
-                            StmtType.VOID -> {}
+                            StmtType.STRING -> {
+                                result = StmtValue(stringValue=variable.value.stringValue)
+                            }
+                            else -> {}
                         }
                         break
                     }
@@ -286,7 +332,10 @@ class Analyzer(
                                 StmtType.BOOL -> {
                                     result = StmtValue(boolValue=constant.value.boolValue)
                                 }
-                                StmtType.VOID -> {}
+                                StmtType.STRING -> {
+                                    result = StmtValue(stringValue=constant.value.stringValue)
+                                }
+                                else -> {}
                             }
                             break
                         }
@@ -306,7 +355,10 @@ class Analyzer(
                             StmtType.BOOL -> {
                                 result = StmtValue(boolValue = variable.value.boolValue)
                             }
-                            StmtType.VOID -> {}
+                            StmtType.STRING -> {
+                                result = StmtValue(stringValue = variable.value.stringValue)
+                            }
+                            else -> {}
                         }
                         break
                     }
@@ -364,6 +416,10 @@ class Analyzer(
                 if (op1.type == StmtType.INT && op2.type == StmtType.INT) {
                     result = StmtValue(boolValue = (op1.getValue() as Int) == (op2.getValue() as Int))
                 }
+
+                if (op1.type == StmtType.STRING && op2.type == StmtType.STRING) {
+                    result = StmtValue(boolValue = (op1.getValue() as String) == (op2.getValue() as String))
+                }
             }
             is JNeExpr -> {
                 var op1 = calculate(value.op1, localVariables)
@@ -378,6 +434,10 @@ class Analyzer(
 
                 if (op1.type == StmtType.INT && op2.type == StmtType.INT) {
                     result = StmtValue(boolValue = (op1.getValue() as Int) != (op2.getValue() as Int))
+                }
+
+                if (op1.type == StmtType.STRING && op2.type == StmtType.STRING) {
+                    result = StmtValue(boolValue = (op1.getValue() as String) != (op2.getValue() as String))
                 }
             }
             is JCmpgExpr -> {

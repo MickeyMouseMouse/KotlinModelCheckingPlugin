@@ -89,7 +89,13 @@ class Tools {
                 arrayOf("nuxmv", modelCodeFile.absolutePath)
             )
 
-            return Pair(exitCode, output.substring(1138, output.length)) // first 1138 characters are the nuXmv preamble
+            return Pair(
+                exitCode,
+                output.substring( // skip the first few lines with the nuXmv preamble
+                    1138, // output.indexOf("-- specification")
+                    output.length
+                )
+            )
         }
     }
 }

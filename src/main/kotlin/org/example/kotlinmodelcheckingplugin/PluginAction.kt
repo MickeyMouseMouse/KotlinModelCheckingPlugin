@@ -70,13 +70,21 @@ class PluginAction: DumbAwareAction() {
                         StmtValue(type = StmtType.INT, intValue = initValueString?.toInt()),
                         false
                     )
-
                     "boolean" -> newVar = Variable(
                         property.nameAsSafeName.asString(),
                         StmtValue(type = StmtType.BOOL, boolValue = initValueString?.toBoolean()),
                         StmtValue(type = StmtType.BOOL, boolValue = initValueString?.toBoolean()),
                         false
                     )
+                    "string" -> {
+                        val stringValue = initValueString!!.substring(1, initValueString.length - 1)
+                        newVar = Variable(
+                            property.nameAsSafeName.asString(),
+                            StmtValue(type = StmtType.STRING, stringValue = stringValue),
+                            StmtValue(type = StmtType.STRING, stringValue = stringValue),
+                            false
+                        )
+                    }
                 }
 
                 for (annotation in property.annotationEntries) {
@@ -98,11 +106,17 @@ class PluginAction: DumbAwareAction() {
                         property.nameAsSafeName.asString(),
                         StmtValue(type = StmtType.INT, intValue = initValueString?.toInt())
                     )
-
                     "boolean" -> newConst = Constant(
                         property.nameAsSafeName.asString(),
                         StmtValue(type = StmtType.BOOL, boolValue = initValueString?.toBoolean())
                     )
+                    "string" -> {
+                        val stringValue = initValueString!!.substring(1, initValueString.length - 1)
+                        newConst = Constant(
+                            property.nameAsSafeName.asString(),
+                            StmtValue(type = StmtType.STRING, stringValue = stringValue)
+                        )
+                    }
                 }
                 constants.add(newConst)
             }

@@ -37,7 +37,6 @@ class NuXmvModelBuilder(
     private fun getVarBlock(): StringBuilder {
         val result = StringBuilder("VAR\n")
         for (variable in variables) {
-            result.append("${tab}${variable.name}: ")
             when (variable.value.type) {
                 StmtType.INT -> {
                     var min = Int.MAX_VALUE
@@ -46,15 +45,12 @@ class NuXmvModelBuilder(
                         if (vertex.intValue!! < min) min = vertex.intValue!!
                         if (vertex.intValue!! > max) max = vertex.intValue!!
                     }
-                    result.append("${min}..${max};\n")
-                }
-                StmtType.DOUBLE -> {
-                    // TODO
+                    result.append("${tab}${variable.name}: ${min}..${max};\n")
                 }
                 StmtType.BOOL -> {
-                    result.append("boolean;\n")
+                    result.append("${tab}${variable.name}: boolean;\n")
                 }
-                StmtType.VOID -> {}
+                else -> {}
             }
         }
         return result
@@ -66,18 +62,17 @@ class NuXmvModelBuilder(
     private fun getInitBlock(): StringBuilder {
         val result = StringBuilder()
         for (variable in variables) {
-            result.append("${tab}init(${variable.name}) := ")
             when (variable.value.type) {
                 StmtType.INT -> {
-                    result.append("${variable.initValue.intValue};\n")
+                    result.append("${tab}init(${variable.name}) := ${variable.initValue.intValue};\n")
                 }
                 StmtType.DOUBLE -> {
-                    result.append("${variable.initValue.doubleValue};\n")
+                    result.append("${tab}init(${variable.name}) := ${variable.initValue.doubleValue};\n")
                 }
                 StmtType.BOOL -> {
-                    result.append("${variable.initValue.boolValue.toString().uppercase()};\n")
+                    result.append("${tab}init(${variable.name}) := ${variable.initValue.boolValue.toString().uppercase()};\n")
                 }
-                StmtType.VOID -> {}
+                else -> {}
             }
         }
         return result
@@ -113,7 +108,7 @@ class NuXmvModelBuilder(
                         StmtType.INT -> transitionDescription.append(vertex.intValue)
                         StmtType.DOUBLE -> transitionDescription.append(vertex.doubleValue)
                         StmtType.BOOL -> transitionDescription.append(vertex.boolValue.toString().uppercase())
-                        StmtType.VOID -> {}
+                        else -> {}
                     }
 
                     if (i != transition.targetIds.indices.last) transitionDescription.append(", ")
@@ -142,8 +137,7 @@ class NuXmvModelBuilder(
                 StmtType.BOOL -> {
                     conditionDescription.append("${variable.name} = ${variable.value.boolValue.toString().uppercase()}")
                 }
-                StmtType.DOUBLE -> {}
-                StmtType.VOID -> {}
+                else -> {}
             }
             if (i != conditionList.indices.last) conditionDescription.append(" & ")
         }
